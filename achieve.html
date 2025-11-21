@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Thành tích</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background:#0f1115;
+      color:white;
+      padding-bottom:70px;
+    }
+
+    header{
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      position: sticky; top:0; z-index:5;
+    }
+    header h1{ margin:0; font-size:20px; }
+    header a{
+      color:white; text-decoration:none; font-weight:bold;
+      background: rgba(255,255,255,0.15);
+      padding:6px 10px; border-radius:999px; font-size:14px;
+    }
+
+    .wrap{
+      max-width:1000px;
+      margin:14px auto;
+      padding:0 14px;
+      display:grid; gap:14px;
+    }
+    .card{
+      background:#151824;
+      border-radius:16px;
+      padding:14px;
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow:0 8px 20px rgba(0,0,0,0.25);
+    }
+    .title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .title h2{ margin:0; font-size:18px; color:#ffd1e6; }
+    .sub{ font-size:14px; opacity:.8; line-height:1.5; }
+
+    .bar{
+      display:flex; gap:8px; flex-wrap:wrap; font-size:14px;
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:12px;
+    }
+    .pill{
+      background: rgba(255,255,255,0.1);
+      padding:6px 10px; border-radius:999px; font-weight:bold;
+    }
+
+    .list{ display:grid; gap:10px; }
+    .ach{
+      background: rgba(255,255,255,0.06);
+      padding:12px;
+      border-radius:14px;
+      display:grid;
+      grid-template-columns: auto 1fr auto;
+      gap:10px;
+      align-items:center;
+      border:1px solid transparent;
+    }
+    .ach.done{
+      border:1px solid rgba(46, 204, 113, 0.7);
+      background: rgba(46, 204, 113, 0.12);
+    }
+    .icon{ font-size:28px; width:34px; text-align:center; }
+
+    .ach b{ font-size:16px; }
+    .reward{ font-weight:900; color:#ffd1e6; font-size:14px; }
+
+    .btn{
+      border:none; cursor:pointer; font-weight:bold;
+      padding:8px 10px; border-radius:10px;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      color:white; font-size:14px;
+    }
+    .btn.light{
+      background: rgba(255,255,255,0.12);
+      color:white;
+    }
+
+    /* huy hiệu */
+    .badges{
+      display:grid; grid-template-columns: repeat(5,1fr); gap:10px;
+    }
+    .badge{
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:12px; text-align:center; font-size:13px;
+      min-height:90px; display:flex; flex-direction:column; justify-content:center; gap:6px;
+      border:1px dashed rgba(255,255,255,0.15);
+      opacity:.55;
+    }
+    .badge.unlock{
+      opacity:1; border:1px solid rgba(255,255,255,0.15);
+      background: rgba(255,61,127,0.18);
+    }
+    .badge .big{ font-size:26px; }
+
+    /* popup */
+    .popup{
+      position: fixed; inset:0; background: rgba(0,0,0,0.6);
+      display:none; align-items:center; justify-content:center; z-index:10;
+      padding:14px;
+    }
+    .popup .box{
+      width:100%; max-width:420px;
+      background:#151824; border-radius:16px; padding:14px;
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    .popup h3{ margin-top:0; }
+    .popup button{
+      width:100%; padding:10px; margin-top:8px; border-radius:12px;
+      border:none; cursor:pointer; font-weight:bold;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9); color:white;
+    }
+    .popup .close{ background: rgba(255,255,255,0.08); }
+
+    /* menu dưới */
+    .nav{
+      display:flex; justify-content:space-around;
+      background:white; border-top:1px solid #eee;
+      padding:8px 0; font-size:13px;
+      position: fixed; left:0; right:0; bottom:0;
+    }
+    .nav a{
+      text-decoration:none; color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px; font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
+
+    @media (max-width:820px){
+      .badges{ grid-template-columns: repeat(3,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html">← Hồ sơ</a>
+  <h1>NearLove • Thành tích</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="wrap">
+
+  <!-- Trạng thái -->
+  <div class="bar card">
+    <div class="pill">Level tình yêu: 1 ❤️</div>
+    <div class="pill">Xu: <span id="coins">1200</span> 💰</div>
+    <div class="pill">Huy hiệu mở: <span id="badgeCount">1</span>/8</div>
+  </div>
+
+  <!-- Nhiệm vụ thành tích -->
+  <div class="card">
+    <div class="title">
+      <h2>✅ Nhiệm vụ / Thành tích</h2>
+      <div class="sub">Hoàn thành để nhận xu & huy hiệu</div>
+    </div>
+
+    <div class="list" id="achList">
+
+      <div class="ach done" data-reward="100" data-badge="Người mới">
+        <div class="icon">🌱</div>
+        <div>
+          <b>Người mới bắt đầu</b>
+          <div class="sub">Tạo tài khoản lần đầu</div>
+          <div class="reward">+100 xu • Huy hiệu “Người mới”</div>
+        </div>
+        <button class="btn light" disabled>Đã nhận</button>
+      </div>
+
+      <div class="ach" data-reward="200" data-badge="Kẻ đi match">
+        <div class="icon">💗</div>
+        <div>
+          <b>Kẻ đi match</b>
+          <div class="sub">Thực hiện 5 lượt ghép đôi</div>
+          <div class="reward">+200 xu • Huy hiệu “Kẻ đi match”</div>
+        </div>
+        <button class="btn" onclick="claim(this)">Nhận</button>
+      </div>
+
+      <div class="ach" data-reward="150" data-badge="Chém gió">
+        <div class="icon">💬</div>
+        <div>
+          <b>Chém gió thần sầu</b>
+          <div class="sub">Gửi 10 tin nhắn</div>
+          <div class="reward">+150 xu • Huy hiệu “Chém gió”</div>
+        </div>
+        <button class="btn" onclick="claim(this)">Nhận</button>
+      </div>
+
+      <div class="ach" data-reward="300" data-badge="Chủ nhà">
+        <div class="icon">🏠</div>
+        <div>
+          <b>Chủ nhà mới</b>
+          <div class="sub">Vào khu nhà 3 lần</div>
+          <div class="reward">+300 xu • Huy hiệu “Chủ nhà”</div>
+        </div>
+        <button class="btn" onclick="claim(this)">Nhận</button>
+      </div>
+
+      <div class="ach" data-reward="500" data-badge="Nuôi pet">
+        <div class="icon">🐾</div>
+        <div>
+          <b>Nuôi pet giỏi</b>
+          <div class="sub">Sở hữu 2 thú cưng</div>
+          <div class="reward">+500 xu • Huy hiệu “Nuôi pet”</div>
+        </div>
+        <button class="btn" onclick="claim(this)">Nhận</button>
+      </div>
+
+      <div class="ach" data-reward="800" data-badge="VIP đầu đời">
+        <div class="icon">👑</div>
+        <div>
+          <b>VIP đầu đời</b>
+          <div class="sub">Nâng VIP bất kỳ</div>
+          <div class="reward">+800 xu • Huy hiệu “VIP đầu đời”</div>
+        </div>
+        <button class="btn" onclick="claim(this)">Nhận</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Huy hiệu -->
+  <div class="card">
+    <div class="title">
+      <h2>🏅 Bộ sưu tập huy hiệu</h2>
+      <div class="sub">Huy hiệu sẽ hiển thị trên hồ sơ</div>
+    </div>
+
+    <div class="badges" id="badges">
+      <div class="badge unlock" data-name="Người mới"><div class="big">🌱</div><b>Người mới</b></div>
+      <div class="badge" data-name="Kẻ đi match"><div class="big">💗</div><b>Kẻ đi match</b></div>
+      <div class="badge" data-name="Chém gió"><div class="big">💬</div><b>Chém gió</b></div>
+      <div class="badge" data-name="Chủ nhà"><div class="big">🏠</div><b>Chủ nhà</b></div>
+      <div class="badge" data-name="Nuôi pet"><div class="big">🐾</div><b>Nuôi pet</b></div>
+      <div class="badge" data-name="VIP đầu đời"><div class="big">👑</div><b>VIP đầu đời</b></div>
+      <div class="badge" data-name="Đại gia"><div class="big">💰</div><b>Đại gia</b></div>
+      <div class="badge" data-name="Cặp đôi"><div class="big">💍</div><b>Cặp đôi</b></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- popup -->
+<div class="popup" id="popup">
+  <div class="box">
+    <h3 id="popTitle">Thành tích</h3>
+    <p id="popText" style="opacity:.9; line-height:1.5;"></p>
+    <button onclick="closePop()">OK</button>
+    <button class="close" onclick="closePop()">Đóng</button>
+  </div>
+</div>
+
+<!-- menu dưới -->
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a href="game.html">🎮<span>Game</span></a>
+  <a href="event.html">🏆<span>BXH</span></a>
+  <a href="shop.html">🛒<span>Shop</span></a>
+  <a href="wedding.html">💍<span>Cưới</span></a>
+  <a href="guild.html">🏰<span>Bang</span></a>
+  <a class="active" href="achieve.html">🏅<span>Thành tích</span></a>
+</div>
+
+<script>
+  let coins = 1200;
+  let unlocked = new Set(["Người mới"]);
+
+  const coinsEl = document.getElementById("coins");
+  const badgeCountEl = document.getElementById("badgeCount");
+
+  function showPop(title, text){
+    document.getElementById("popTitle").innerText = title;
+    document.getElementById("popText").innerText = text;
+    document.getElementById("popup").style.display = "flex";
+  }
+  function closePop(){
+    document.getElementById("popup").style.display = "none";
+  }
+
+  function updateBadges(){
+    document.querySelectorAll(".badge").forEach(b=>{
+      const name = b.dataset.name;
+      if(unlocked.has(name)) b.classList.add("unlock");
+    });
+    badgeCountEl.innerText = unlocked.size;
+  }
+
+  function claim(btn){
+    const ach = btn.closest(".ach");
+    if(ach.classList.contains("done")) return;
+
+    const reward = Number(ach.dataset.reward);
+    const badge = ach.dataset.badge;
+
+    coins += reward;
+    coinsEl.innerText = coins;
+
+    unlocked.add(badge);
+    updateBadges();
+
+    ach.classList.add("done");
+    btn.innerText = "Đã nhận";
+    btn.classList.add("light");
+    btn.disabled = true;
+
+    showPop("Nhận thưởng ✅", `Bạn nhận +${reward} xu và mở huy hiệu: ${badge}`);
+  }
+
+  updateBadges();
+</script>
+
+</body>
+</html>
