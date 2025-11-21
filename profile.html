@@ -1,239 +1,124 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NearLove - Hồ sơ</title>
+<meta charset="UTF-8" />
+<title>NearLove - Hồ sơ</title>
 
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f6f7fb;
-      color: #222;
-      padding-bottom: 70px;
-    }
-    header {
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      color: white;
-      padding: 18px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky; top: 0; z-index: 10;
-    }
-    header h1 { font-size: 20px; margin: 0; }
-    header a { color: white; text-decoration: none; font-weight: bold; }
+<style>
+  body { font-family: Arial; padding:20px; background:#f9f9f9; }
+  h2 { text-align:center; }
+  .input {
+    width:100%; padding:12px; margin:8px 0;
+    border-radius:10px; border:1px solid #ccc;
+  }
+  .btn {
+    width:100%; padding:14px;
+    border:none; border-radius:10px;
+    background:#ff2e73; color:white; font-weight:bold;
+    margin-top:10px; font-size:16px;
+  }
+  #msg { margin-top:10px; font-size:14px; }
+</style>
 
-    .container {
-      max-width: 920px;
-      margin: auto;
-      padding: 16px;
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 16px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 14px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-    }
-
-    .avatar-box { text-align: center; }
-    .avatar {
-      width: 220px;
-      height: 220px;
-      border-radius: 18px;
-      object-fit: cover;
-      background: #eee;
-      display: block;
-      margin: 6px auto 10px;
-    }
-    .name { font-size: 22px; font-weight: bold; margin: 0; }
-    .sub { opacity: 0.7; margin: 6px 0 10px; }
-
-    .tag {
-      display: inline-block;
-      background: #ffeff5;
-      color: #ff2e73;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 13px;
-      margin: 2px;
-      font-weight: bold;
-    }
-
-    .info-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .info-item {
-      background: #f6f7fb;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 14px;
-    }
-    .info-item b { display: block; margin-bottom: 4px; }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 4px 0 10px;
-    }
-
-    .about {
-      line-height: 1.6;
-      font-size: 15px;
-      background: #f6f7fb;
-      padding: 12px;
-      border-radius: 12px;
-    }
-
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .gallery img {
-      width: 100%;
-      height: 140px;
-      object-fit: cover;
-      border-radius: 12px;
-      background: #eee;
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 15px;
-      text-decoration: none;
-      text-align: center;
-      flex: 1;
-      min-width: 140px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      color: white;
-    }
-    .btn-light { background: #f0f1f5; color: #222; }
-
-    @media (max-width: 800px) {
-      .container { grid-template-columns: 1fr; }
-      .gallery { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* Menu dưới kiểu app */
-    .nav{
-      display:flex;
-      justify-content:space-around;
-      background:white;
-      border-top:1px solid #eee;
-      padding:8px 0;
-      font-size:13px;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-    }
-    .nav a{
-      text-decoration:none;
-      color:#666;
-      display:flex; flex-direction:column; align-items:center;
-      gap:2px;
-      font-weight:bold;
-    }
-    .nav a.active{ color:#ff2e73; }
-  </style>
 </head>
+
 <body>
 
-<header>
-  <h1>NearLove • Hồ sơ</h1>
-  <a href="index.html">Trang chủ</a>
-</header>
+<h2>Hồ sơ cá nhân 💗</h2>
 
-<div class="container">
+<!-- Form hồ sơ -->
+<input id="name" class="input" placeholder="Tên hiển thị">
+<input id="age" class="input" placeholder="Tuổi">
+<input id="gender" class="input" placeholder="Giới tính (Nam/Nữ/Khác)">
+<input id="bio" class="input" placeholder="Giới thiệu bản thân">
 
-  <div class="card avatar-box">
-    <img class="avatar" src="https://i.ibb.co/2cR8ZfQ/avatar-demo.jpg" alt="avatar" />
-    <p class="name">Nam (Demo)</p>
-    <p class="sub">23 tuổi • Hà Nội</p>
+<button class="btn" onclick="saveProfile()">Lưu hồ sơ</button>
 
-    <div>
-      <span class="tag">VIP: Nông Dân</span>
-      <span class="tag">Tâm trạng: Vui 😊</span>
-      <span class="tag">Online</span>
-    </div>
+<p id="msg"></p>
 
-    <div class="info-row">
-      <div class="info-item"><b>Giới tính</b> Nam</div>
-      <div class="info-item"><b>Đang tìm</b> Nữ</div>
-      <div class="info-item"><b>Chiều cao</b> 1m72</div>
-      <div class="info-item"><b>Sở thích</b> Game, phim, du lịch</div>
-    </div>
+<hr style="margin:20px 0;">
 
-    <div class="actions">
-      <a class="btn btn-primary" href="match.html">Bắt đầu ghép đôi</a>
-      <a class="btn btn-light" href="vip.html">Nâng VIP</a>
-      <a class="btn btn-light" href="game.html">Mini Game</a>
-      <a class="btn btn-light" href="chat.html">Vào Chat</a>
-    </div>
-  </div>
+<h3>Thông tin đã lưu:</h3>
+<p><b>Tên:</b> <span id="d_name"></span></p>
+<p><b>Tuổi:</b> <span id="d_age"></span></p>
+<p><b>Giới tính:</b> <span id="d_gender"></span></p>
+<p><b>Mô tả:</b> <span id="d_bio"></span></p>
 
-  <div style="display:flex; flex-direction:column; gap:16px;">
-    <div class="card">
-      <div class="section-title">Giới thiệu</div>
-      <div class="about">
-        Xin chào! Mình là Nam, thích những cuộc trò chuyện vui vẻ
-        và muốn tìm một người đồng hành cùng học hỏi, đi chơi
-        và trải nghiệm các mini game trong NearLove.
-      </div>
-    </div>
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
 
-    <div class="card">
-      <div class="section-title">Ảnh nổi bật</div>
-      <div class="gallery">
-        <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=800&auto=format&fit=crop" />
-        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800&auto=format&fit=crop" />
-        <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop" />
-        <img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?q=80&w=800&auto=format&fit=crop" />
-        <img src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=800&auto=format&fit=crop" />
-        <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=800&auto=format&fit=crop" />
-      </div>
-    </div>
+<!-- Code Firestore -->
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, setDoc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-    <div class="card">
-      <div class="section-title">Bộ sưu tập NearLove</div>
-      <div class="info-row">
-        <div class="info-item"><b>Thú cưng</b> Chó Shiba 🐕</div>
-        <div class="info-item"><b>Nhà</b> Căn hộ 2 tầng 🏠</div>
-        <div class="info-item"><b>Xu</b> 1,200 xu 💰</div>
-        <div class="info-item"><b>Danh hiệu</b> Người mới</div>
-      </div>
-    </div>
-  </div>
-</div>
+  const msg = document.getElementById("msg");
 
-<div class="nav">
-  <a href="index.html">🏠<span>Home</span></a>
-  <a href="match.html">💗<span>Match</span></a>
-  <a href="chat.html">💬<span>Chat</span></a>
-  <a href="vip.html">👑<span>VIP</span></a>
-  <a class="active" href="profile.html">👤<span>Profile</span></a>
-</div>
+  // Lấy UID người đăng nhập
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      alert("Bạn chưa đăng nhập. Chuyển về trang login.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const uid = user.uid;
+
+    // Load hồ sơ
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      document.getElementById("d_name").innerText = data.name || "";
+      document.getElementById("d_age").innerText = data.age || "";
+      document.getElementById("d_gender").innerText = data.gender || "";
+      document.getElementById("d_bio").innerText = data.bio || "";
+
+      // Gán ngược lên input (edit)
+      name.value = data.name || "";
+      age.value = data.age || "";
+      gender.value = data.gender || "";
+      bio.value = data.bio || "";
+    }
+  });
+
+  // Lưu hồ sơ
+  window.saveProfile = async () => {
+    const user = auth.currentUser;
+
+    if (!user) return alert("Chưa đăng nhập!");
+
+    const uid = user.uid;
+
+    const data = {
+      name: name.value,
+      age: age.value,
+      gender: gender.value,
+      bio: bio.value,
+    };
+
+    try {
+      await setDoc(doc(db, "users", uid), data, { merge: true });
+
+      msg.style.color = "green";
+      msg.innerText = "Đã lưu hồ sơ thành công!";
+
+      // Hiển thị lại
+      d_name.innerText = data.name;
+      d_age.innerText = data.age;
+      d_gender.innerText = data.gender;
+      d_bio.innerText = data.bio;
+
+    } catch (err) {
+      msg.style.color = "red";
+      msg.innerText = err.message;
+    }
+  }
+</script>
 
 </body>
 </html>
