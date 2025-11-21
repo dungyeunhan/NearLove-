@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Game & Thế giới ảo</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background: #0f1115;
+      color: white;
+      padding-bottom: 70px; /* chừa chỗ menu dưới */
+    }
+
+    header{
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      position: sticky; top: 0; z-index: 5;
+    }
+    header h1{ margin:0; font-size:20px; }
+    header a{
+      color:white; text-decoration:none; font-weight:bold;
+      background: rgba(255,255,255,0.15);
+      padding:6px 10px; border-radius:999px; font-size:14px;
+    }
+
+    .wrap{
+      max-width: 1000px;
+      margin: 14px auto;
+      padding: 0 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card{
+      background: #151824;
+      border-radius: 16px;
+      padding: 14px;
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+    .title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    .title h2{
+      margin:0; font-size:18px; color:#ffd1e6;
+    }
+    .sub{ font-size:14px; opacity:0.8; }
+
+    /* mini game list */
+    .games{
+      display:grid;
+      grid-template-columns: repeat(3,1fr);
+      gap:10px;
+    }
+    .game-item{
+      background: rgba(255,255,255,0.06);
+      padding:12px;
+      border-radius:14px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height: 110px;
+    }
+    .game-item b{ font-size:16px; }
+    .game-item button{
+      margin-top:auto;
+      border:none; cursor:pointer; font-weight:bold;
+      padding:8px 10px; border-radius:10px;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      color:white;
+    }
+
+    /* pets */
+    .pets{
+      display:grid; grid-template-columns: repeat(4,1fr); gap:10px;
+    }
+    .pet{
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:14px; text-align:center;
+      font-size:14px;
+    }
+    .pet .icon{ font-size:34px; }
+
+    /* house */
+    .house{
+      display:grid; gap:10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .room{
+      background: rgba(255,255,255,0.06);
+      padding:12px; border-radius:14px;
+    }
+    .room b{ display:block; margin-bottom:4px; }
+
+    /* coin bar */
+    .bar{
+      display:flex; gap:10px; flex-wrap:wrap; font-size:14px;
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:12px;
+    }
+    .pill{
+      background: rgba(255,255,255,0.1);
+      padding:6px 10px; border-radius:999px; font-weight:bold;
+    }
+
+    /* popup */
+    .popup{
+      position: fixed; inset:0; background: rgba(0,0,0,0.6);
+      display:none; align-items:center; justify-content:center; z-index:10;
+      padding:14px;
+    }
+    .popup .box{
+      width:100%; max-width:420px;
+      background:#151824; border-radius:16px; padding:14px;
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    .popup h3{ margin-top:0; }
+    .popup button{
+      width:100%; padding:10px; margin-top:8px; border-radius:12px;
+      border:none; cursor:pointer; font-weight:bold;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9); color:white;
+    }
+    .popup .close{
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* menu dưới */
+    .nav{
+      display:flex;
+      justify-content:space-around;
+      background:white;
+      border-top:1px solid #eee;
+      padding:8px 0;
+      font-size:13px;
+      position: fixed;
+      left:0; right:0; bottom:0;
+    }
+    .nav a{
+      text-decoration:none;
+      color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px;
+      font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
+
+    @media (max-width: 820px){
+      .games{ grid-template-columns: repeat(2,1fr); }
+      .pets{ grid-template-columns: repeat(2,1fr); }
+      .house{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html">← Hồ sơ</a>
+  <h1>NearLove • Game & Thế giới ảo</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="wrap">
+
+  <!-- thanh trạng thái -->
+  <div class="bar card">
+    <div class="pill">VIP: Nông Dân</div>
+    <div class="pill">Xu: <span id="coins">1200</span> 💰</div>
+    <div class="pill">Level tình yêu: 1 ❤️</div>
+    <div class="pill">Thú cưng: Shiba 🐕</div>
+  </div>
+
+  <!-- mini games -->
+  <div class="card">
+    <div class="title">
+      <h2>🎮 Mini Game</h2>
+      <div class="sub">Chơi để nhận xu & quà</div>
+    </div>
+
+    <div class="games">
+      <div class="game-item">
+        <b>Love Farm 🌾</b>
+        <div class="sub">Thu hoạch nhận xu</div>
+        <button onclick="play('Love Farm', 200)">Chơi ngay</button>
+      </div>
+      <div class="game-item">
+        <b>Love Beach 🏖️</b>
+        <div class="sub">Nhặt vỏ sò đổi quà</div>
+        <button onclick="play('Love Beach', 150)">Chơi ngay</button>
+      </div>
+      <div class="game-item">
+        <b>Love Arena ⚔️</b>
+        <div class="sub">Đấu vui nhận thưởng</div>
+        <button onclick="play('Love Arena', 300)">Chơi ngay</button>
+      </div>
+      <div class="game-item">
+        <b>Vòng quay may mắn 🎡</b>
+        <div class="sub">Quay 1 lần tốn 50 xu</div>
+        <button onclick="spin()">Quay ngay</button>
+      </div>
+      <div class="game-item">
+        <b>Đố vui tình yêu 💬</b>
+        <div class="sub">Trả lời đúng +100 xu</div>
+        <button onclick="quiz()">Bắt đầu</button>
+      </div>
+      <div class="game-item">
+        <b>Mini Dance 🎵</b>
+        <div class="sub">Chill & nhận quà</div>
+        <button onclick="play('Mini Dance', 120)">Chơi ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- pets -->
+  <div class="card">
+    <div class="title">
+      <h2>🐾 Thú cưng</h2>
+      <div class="sub">Sưu tầm để tăng điểm hấp dẫn</div>
+    </div>
+
+    <div class="pets">
+      <div class="pet"><div class="icon">🐕</div><b>Shiba</b><div class="sub">Hiếm</div></div>
+      <div class="pet"><div class="icon">🐈</div><b>Mèo Ú</b><div class="sub">Thường</div></div>
+      <div class="pet"><div class="icon">🦊</div><b>Cáo Tuyết</b><div class="sub">Cực hiếm</div></div>
+      <div class="pet"><div class="icon">🐉</div><b>Rồng Mini</b><div class="sub">VIP Đế Vương</div></div>
+    </div>
+
+    <div style="margin-top:10px; font-size:14px; opacity:.85;">
+      👉 Sau này tớ sẽ làm shop thú cưng + hệ nuôi & đua thú cưng.
+    </div>
+  </div>
+
+  <!-- house -->
+  <div class="card">
+    <div class="title">
+      <h2>🏠 Nhà của bạn</h2>
+      <div class="sub">Trang trí để khoe hồ sơ</div>
+    </div>
+
+    <div class="house">
+      <div class="room">
+        <b>Phòng khách</b>
+        • Sofa hồng pastel 🛋️<br/>
+        • TV ảo 📺<br/>
+        • Bộ ảnh couple 📸
+      </div>
+      <div class="room">
+        <b>Phòng ngủ</b>
+        • Giường đôi 💗<br/>
+        • Đèn ngủ chill 🌙<br/>
+        • Tủ đồ thời trang 👗
+      </div>
+      <div class="room">
+        <b>Vườn mini</b>
+        • Trồng hoa 🌸<br/>
+        • Hồ cá 🐟<br/>
+        • Ghế xích đu
+      </div>
+      <div class="room">
+        <b>Góc thú cưng</b>
+        • Nhà Shiba 🐕<br/>
+        • Đồ chơi bóng ⚽<br/>
+        • Thức ăn thú cưng
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- popup -->
+<div class="popup" id="popup">
+  <div class="box">
+    <h3 id="popTitle">Mini game</h3>
+    <p id="popText" style="opacity:.9; line-height:1.5;"></p>
+    <button onclick="closePop()">OK</button>
+    <button class="close" onclick="closePop()">Đóng</button>
+  </div>
+</div>
+
+<!-- Menu dưới -->
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a class="active" href="game.html">🎮<span>Game</span></a>
+</div>
+
+<script>
+  let coins = 1200;
+  const coinsEl = document.getElementById("coins");
+
+  function showPop(title, text){
+    document.getElementById("popTitle").innerText = title;
+    document.getElementById("popText").innerText = text;
+    document.getElementById("popup").style.display = "flex";
+  }
+  function closePop(){
+    document.getElementById("popup").style.display = "none";
+  }
+
+  function addCoins(x){
+    coins += x;
+    coinsEl.innerText = coins;
+  }
+  function spendCoins(x){
+    if(coins < x){
+      showPop("Thiếu xu 😭", "Bạn không đủ xu. Hãy chơi mini game để kiếm thêm nhé!");
+      return false;
+    }
+    coins -= x;
+    coinsEl.innerText = coins;
+    return true;
+  }
+
+  function play(name, reward){
+    addCoins(reward);
+    showPop(
+      name + " ✅",
+      "Bạn vừa chơi " + name + " và nhận được +" + reward + " xu!"
+    );
+  }
+
+  function spin(){
+    if(!spendCoins(50)) return;
+    const rewards = [0, 20, 50, 100, 200, 500];
+    const r = rewards[Math.floor(Math.random()*rewards.length)];
+    addCoins(r);
+    showPop("Vòng quay may mắn 🎡", "Bạn nhận được: +" + r + " xu!");
+  }
+
+  function quiz(){
+    const ok = confirm("Câu hỏi: Bạn thích người như thế nào?\n\nOK = Vui vẻ\nCancel = Dịu dàng");
+    if(ok){
+      addCoins(100);
+      showPop("Đố vui 💬", "Bạn trả lời đúng! +100 xu.");
+    }else{
+      addCoins(50);
+      showPop("Đố vui 💬", "Cũng hay đó! +50 xu khuyến khích.");
+    }
+  }
+</script>
+
+</body>
+</html>
