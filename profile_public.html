@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Hồ sơ công khai</title>
+
+<style>
+  body {
+    font-family: Arial;
+    background: #fff0f7;
+    margin:0; padding:20px;
+  }
+  .profile-box {
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    max-width:500px;
+    margin:auto;
+  }
+  .name {
+    font-size:24px;
+    font-weight:bold;
+  }
+  .info {
+    margin:6px 0;
+    opacity:0.85;
+  }
+  .bio {
+    margin-top:10px;
+    font-style:italic;
+    opacity:0.9;
+  }
+  .btn {
+    width:100%;
+    padding:12px;
+    background:#ff2e73;
+    color:white;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:bold;
+    margin-top:14px;
+  }
+  .btn-chat {
+    background:#3a86ff;
+  }
+</style>
+
+</head>
+<body>
+
+<h2 style="text-align:center; color:#ff2e73;">💗 Hồ sơ người dùng</h2>
+
+<div class="profile-box">
+  <div class="name" id="name">...</div>
+  <div class="info" id="age"></div>
+  <div class="info" id="gender"></div>
+  <div class="bio" id="bio"></div>
+
+  <button class="btn" id="likeBtn" onclick="">💗 Thả tim</button>
+  <button class="btn btn-chat" id="chatBtn" style="display:none;">💬 Chat ngay</button>
+
+</div>
+
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const params = new URLSearchParams(window.location.search);
+  const targetUid = params.get("uid");
+
+  if (!targetUid) {
+    alert("Không tìm thấy UID người dùng!");
+  }
+
+  let currentUid = null;
+
+  // Load user hiện tại + hồ sơ người khác
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      alert("Bạn chưa đăng nhập!");
+      window.location.href = "login.html";
+      return;
+    }
+
+    currentUid = user.uid;
+
+    if (currentUid === targetUid) {
+      alert("Đây là hồ sơ của bạn. Chuyển sang profile.html");
+      window.location.href = "profile.html";
+      return;
+    }
+
+    // Lấy dữ liệu người kia
+    const snap = await getDoc(doc(db, "users", targetUid));
+    if (!snap.exists()) {
+      alert("User chưa tạo hồ sơ!");
+      return;
+    }
+
+    const data = snap.data();
+
+    document.getElementById("name").innerText = data.name || "Chưa đặt tên";
+    document.getElementById("age").innerText = "Tuổi: " + (data.age || "?");
+    document.getElementById("gender").innerText = "Giới tính: " + (data.gender || "?");
+    document.getElementById("bio").innerText = data.bio || "";
+
+    // Kiểm tra match
+    checkMatch();
+  });
+
+  // Check match status
+  async function checkMatch() {
+    const m1 = await getDoc(doc(db, "matches", `${currentUid}_${targetUid}`));
+    const m2 = await getDoc(doc(db, "matches", `${targetUid}_${currentUid}`));
+
+    if (m1.exists() || m2.exists()) {
+      document.getElementById("likeBtn").style.display = "none";
+
+      const matchId = m1.exists() 
+        ? `${currentUid}_${targetUid}`
+        : `${targetUid}_${currentUid}`;
+
+      const chatBtn = document.getElementById("chatBtn");
+      chatBtn.style.display = "block";
+      chatBtn.onclick = () => {
+        window.location.href = `chat.html?match=${matchId}`;
+      };
+    }
+  }
+
+  // Like user
+  window.likeUserNow = async () => {
+    const myUid = currentUid;
+
+    await setDoc(doc(db, "likes", `${myUid}_${targetUid}`), {
+      from: myUid,
+      to: targetUid,
+      time: serverTimestamp()
+    });
+
+    // Kiểm tra reverse like
+    const reverse = await getDoc(doc(db, "likes", `${targetUid}_${myUid}`));
+
+    if (reverse.exists()) {
+      const matchId = `${myUid}_${targetUid}`;
+
+      await setDoc(doc(db, "matches", matchId), {
+        users: [myUid, targetUid],
+        time: serverTimestamp()
+      });
+
+      alert("🎉 MATCH THÀNH CÔNG!");
+      window.location.reload();
+
+    } else {
+      alert("💗 Đã thả tim! Chờ đối phương thả tim lại.");
+    }
+  };
+
+  // Gán hàm vào nút
+  document.getElementById("likeBtn").onclick = window.likeUserNow;
+</script>
+
+</body>
+</html>
