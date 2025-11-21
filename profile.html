@@ -12,6 +12,7 @@
       font-family: Arial, sans-serif;
       background: #f6f7fb;
       color: #222;
+      padding-bottom: 70px;
     }
     header {
       background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
@@ -20,6 +21,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
     }
     header h1 { font-size: 20px; margin: 0; }
     header a { color: white; text-decoration: none; font-weight: bold; }
@@ -33,7 +35,6 @@
       gap: 16px;
     }
 
-    /* Card chung */
     .card {
       background: white;
       border-radius: 16px;
@@ -41,10 +42,7 @@
       box-shadow: 0 6px 16px rgba(0,0,0,0.08);
     }
 
-    /* Khối avatar */
-    .avatar-box {
-      text-align: center;
-    }
+    .avatar-box { text-align: center; }
     .avatar {
       width: 220px;
       height: 220px;
@@ -68,7 +66,6 @@
       font-weight: bold;
     }
 
-    /* Thông tin */
     .info-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -83,7 +80,6 @@
     }
     .info-item b { display: block; margin-bottom: 4px; }
 
-    /* Nội dung bên phải */
     .section-title {
       font-size: 18px;
       font-weight: bold;
@@ -134,16 +130,32 @@
       background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
       color: white;
     }
-    .btn-light {
-      background: #f0f1f5;
-      color: #222;
-    }
+    .btn-light { background: #f0f1f5; color: #222; }
 
-    /* Mobile */
     @media (max-width: 800px) {
       .container { grid-template-columns: 1fr; }
       .gallery { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* Menu dưới kiểu app */
+    .nav{
+      display:flex;
+      justify-content:space-around;
+      background:white;
+      border-top:1px solid #eee;
+      padding:8px 0;
+      font-size:13px;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+    }
+    .nav a{
+      text-decoration:none;
+      color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px;
+      font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
   </style>
 </head>
 <body>
@@ -155,7 +167,6 @@
 
 <div class="container">
 
-  <!-- Cột trái -->
   <div class="card avatar-box">
     <img class="avatar" src="https://i.ibb.co/2cR8ZfQ/avatar-demo.jpg" alt="avatar" />
     <p class="name">Nam (Demo)</p>
@@ -177,12 +188,11 @@
     <div class="actions">
       <a class="btn btn-primary" href="match.html">Bắt đầu ghép đôi</a>
       <a class="btn btn-light" href="vip.html">Nâng VIP</a>
+      <a class="btn btn-light" href="chat.html">Vào Chat</a>
     </div>
   </div>
 
-  <!-- Cột phải -->
   <div style="display:flex; flex-direction:column; gap:16px;">
-
     <div class="card">
       <div class="section-title">Giới thiệu</div>
       <div class="about">
@@ -213,9 +223,15 @@
         <div class="info-item"><b>Danh hiệu</b> Người mới</div>
       </div>
     </div>
-
   </div>
+</div>
 
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a class="active" href="profile.html">👤<span>Profile</span></a>
 </div>
 
 </body>
