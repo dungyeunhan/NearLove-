@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Hồ sơ</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f7fb;
+      color: #222;
+    }
+    header {
+      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
+      color: white;
+      padding: 18px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 20px; margin: 0; }
+    header a { color: white; text-decoration: none; font-weight: bold; }
+
+    .container {
+      max-width: 920px;
+      margin: auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+    }
+
+    /* Card chung */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+
+    /* Khối avatar */
+    .avatar-box {
+      text-align: center;
+    }
+    .avatar {
+      width: 220px;
+      height: 220px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: #eee;
+      display: block;
+      margin: 6px auto 10px;
+    }
+    .name { font-size: 22px; font-weight: bold; margin: 0; }
+    .sub { opacity: 0.7; margin: 6px 0 10px; }
+
+    .tag {
+      display: inline-block;
+      background: #ffeff5;
+      color: #ff2e73;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      margin: 2px;
+      font-weight: bold;
+    }
+
+    /* Thông tin */
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .info-item {
+      background: #f6f7fb;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+    .info-item b { display: block; margin-bottom: 4px; }
+
+    /* Nội dung bên phải */
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 4px 0 10px;
+    }
+
+    .about {
+      line-height: 1.6;
+      font-size: 15px;
+      background: #f6f7fb;
+      padding: 12px;
+      border-radius: 12px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .gallery img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #eee;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 15px;
+      text-decoration: none;
+      text-align: center;
+      flex: 1;
+      min-width: 140px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
+      color: white;
+    }
+    .btn-light {
+      background: #f0f1f5;
+      color: #222;
+    }
+
+    /* Mobile */
+    @media (max-width: 800px) {
+      .container { grid-template-columns: 1fr; }
+      .gallery { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>NearLove • Hồ sơ</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="container">
+
+  <!-- Cột trái -->
+  <div class="card avatar-box">
+    <img class="avatar" src="https://i.ibb.co/2cR8ZfQ/avatar-demo.jpg" alt="avatar" />
+    <p class="name">Nam (Demo)</p>
+    <p class="sub">23 tuổi • Hà Nội</p>
+
+    <div>
+      <span class="tag">VIP: Nông Dân</span>
+      <span class="tag">Tâm trạng: Vui 😊</span>
+      <span class="tag">Online</span>
+    </div>
+
+    <div class="info-row">
+      <div class="info-item"><b>Giới tính</b> Nam</div>
+      <div class="info-item"><b>Đang tìm</b> Nữ</div>
+      <div class="info-item"><b>Chiều cao</b> 1m72</div>
+      <div class="info-item"><b>Sở thích</b> Game, phim, du lịch</div>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="match.html">Bắt đầu ghép đôi</a>
+      <a class="btn btn-light" href="vip.html">Nâng VIP</a>
+    </div>
+  </div>
+
+  <!-- Cột phải -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+
+    <div class="card">
+      <div class="section-title">Giới thiệu</div>
+      <div class="about">
+        Xin chào! Mình là Nam, thích những cuộc trò chuyện vui vẻ
+        và muốn tìm một người đồng hành cùng học hỏi, đi chơi
+        và trải nghiệm các mini game trong NearLove.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Ảnh nổi bật</div>
+      <div class="gallery">
+        <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=800&auto=format&fit=crop" />
+        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800&auto=format&fit=crop" />
+        <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop" />
+        <img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?q=80&w=800&auto=format&fit=crop" />
+        <img src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=800&auto=format&fit=crop" />
+        <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=800&auto=format&fit=crop" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Bộ sưu tập NearLove</div>
+      <div class="info-row">
+        <div class="info-item"><b>Thú cưng</b> Chó Shiba 🐕</div>
+        <div class="info-item"><b>Nhà</b> Căn hộ 2 tầng 🏠</div>
+        <div class="info-item"><b>Xu</b> 1,200 xu 💰</div>
+        <div class="info-item"><b>Danh hiệu</b> Người mới</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
