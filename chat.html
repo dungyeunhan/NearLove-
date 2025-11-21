@@ -41,7 +41,6 @@
       font-size:14px;
     }
 
-    /* Khung chat */
     .chat{
       flex:1;
       padding:12px;
@@ -49,6 +48,7 @@
       display:flex;
       flex-direction:column;
       gap:8px;
+      padding-bottom: 70px;
     }
     .msg{
       max-width:78%;
@@ -76,12 +76,12 @@
       font-size:11px; opacity:0.6; margin-top:4px;
     }
 
-    /* Input */
     .input-bar{
       padding:10px;
       display:flex; gap:8px;
       border-top:1px solid #e7e8ee;
       background:white;
+      position: fixed; left:0; right:0; bottom:48px;
     }
     input{
       flex:1;
@@ -102,7 +102,6 @@
       font-size:15px;
     }
 
-    /* Menu dưới kiểu app */
     .nav{
       display:flex;
       justify-content:space-around;
@@ -110,6 +109,8 @@
       border-top:1px solid #eee;
       padding:8px 0;
       font-size:13px;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
     }
     .nav a{
       text-decoration:none;
@@ -139,12 +140,10 @@
     Chào bạn 😊 bạn đang làm gì đó?
     <div class="time">16:20</div>
   </div>
-
   <div class="msg you">
     Mình đang test NearLove demo nè 😄
     <div class="time">16:21</div>
   </div>
-
   <div class="msg them">
     Ôi thú vị vậy, NearLove có gì hay?
     <div class="time">16:21</div>
@@ -156,7 +155,6 @@
   <button onclick="sendMsg()">Gửi</button>
 </div>
 
-<!-- Menu dưới -->
 <div class="nav">
   <a href="index.html">🏠<span>Home</span></a>
   <a href="match.html">💗<span>Match</span></a>
@@ -183,7 +181,6 @@
     chat.scrollTop = chat.scrollHeight;
     input.value = "";
 
-    // Auto-reply demo
     setTimeout(()=>{
       const reply = document.createElement("div");
       reply.className = "msg them";
