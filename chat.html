@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Chat</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background:#f6f7fb;
+      color:#222;
+      display:flex;
+      flex-direction:column;
+      height:100vh;
+    }
+
+    header{
+      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
+      color:white;
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    header .left{
+      display:flex; align-items:center; gap:10px;
+    }
+    .avatar{
+      width:38px; height:38px; border-radius:50%;
+      object-fit:cover; background:#fff;
+      border:2px solid rgba(255,255,255,0.8);
+    }
+    header h1{ font-size:18px; margin:0; }
+    header a{
+      color:white; text-decoration:none; font-weight:bold;
+      background: rgba(255,255,255,0.15);
+      padding:6px 10px; border-radius:999px;
+      font-size:14px;
+    }
+
+    /* Khung chat */
+    .chat{
+      flex:1;
+      padding:12px;
+      overflow:auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .msg{
+      max-width:78%;
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:15px;
+      line-height:1.45;
+      box-shadow:0 4px 10px rgba(0,0,0,0.06);
+      animation: pop 0.12s ease-out;
+    }
+    @keyframes pop{ from{transform:scale(0.98);opacity:0.5} to{transform:scale(1);opacity:1} }
+
+    .msg.you{
+      align-self:flex-end;
+      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
+      color:white;
+      border-bottom-right-radius:4px;
+    }
+    .msg.them{
+      align-self:flex-start;
+      background:white;
+      border-bottom-left-radius:4px;
+    }
+    .time{
+      font-size:11px; opacity:0.6; margin-top:4px;
+    }
+
+    /* Input */
+    .input-bar{
+      padding:10px;
+      display:flex; gap:8px;
+      border-top:1px solid #e7e8ee;
+      background:white;
+    }
+    input{
+      flex:1;
+      padding:12px;
+      border-radius:999px;
+      border:1px solid #ddd;
+      outline:none;
+      font-size:15px;
+    }
+    button{
+      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
+      color:white;
+      border:none;
+      padding:0 18px;
+      border-radius:999px;
+      font-weight:bold;
+      cursor:pointer;
+      font-size:15px;
+    }
+
+    /* Menu dưới kiểu app */
+    .nav{
+      display:flex;
+      justify-content:space-around;
+      background:white;
+      border-top:1px solid #eee;
+      padding:8px 0;
+      font-size:13px;
+    }
+    .nav a{
+      text-decoration:none;
+      color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px;
+      font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <img class="avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop" />
+    <div>
+      <h1>Linh 💗</h1>
+      <div style="font-size:12px;opacity:.9">Online</div>
+    </div>
+  </div>
+  <a href="match.html">Ghép đôi</a>
+</header>
+
+<div class="chat" id="chat">
+  <div class="msg them">
+    Chào bạn 😊 bạn đang làm gì đó?
+    <div class="time">16:20</div>
+  </div>
+
+  <div class="msg you">
+    Mình đang test NearLove demo nè 😄
+    <div class="time">16:21</div>
+  </div>
+
+  <div class="msg them">
+    Ôi thú vị vậy, NearLove có gì hay?
+    <div class="time">16:21</div>
+  </div>
+</div>
+
+<div class="input-bar">
+  <input id="input" placeholder="Nhập tin nhắn..." />
+  <button onclick="sendMsg()">Gửi</button>
+</div>
+
+<!-- Menu dưới -->
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a class="active" href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a href="profile.html">👤<span>Profile</span></a>
+</div>
+
+<script>
+  function sendMsg(){
+    const input = document.getElementById("input");
+    const text = input.value.trim();
+    if(!text) return;
+
+    const chat = document.getElementById("chat");
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+
+    const div = document.createElement("div");
+    div.className = "msg you";
+    div.innerHTML = text + `<div class="time">${hh}:${mm}</div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    input.value = "";
+
+    // Auto-reply demo
+    setTimeout(()=>{
+      const reply = document.createElement("div");
+      reply.className = "msg them";
+      reply.innerHTML = "Hay đó 😍 kể thêm đi!" + `<div class="time">${hh}:${mm}</div>`;
+      chat.appendChild(reply);
+      chat.scrollTop = chat.scrollHeight;
+    }, 700);
+  }
+</script>
+
+</body>
+</html>
