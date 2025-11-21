@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>NearLove - Khám phá</title>
+
+<style>
+  body {
+    font-family: Arial;
+    background:#fff0f6;
+    padding:16px;
+  }
+
+  h2 {
+    text-align:center;
+    color:#ff2e73;
+    margin-bottom:20px;
+  }
+
+  .user-card {
+    background:white;
+    padding:14px;
+    margin-bottom:14px;
+    border-radius:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .name {
+    font-size:20px;
+    font-weight:bold;
+  }
+
+  .info {
+    opacity:0.8;
+    margin:4px 0;
+  }
+
+  .btn {
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    background:#ff2e73;
+    color:white;
+    font-size:16px;
+    font-weight:bold;
+    margin-top:10px;
+  }
+
+  .btn-chat {
+    background:#3a86ff;
+  }
+</style>
+
+</head>
+
+<body>
+
+<h2>💞 Khám phá người mới</h2>
+
+<div id="list"></div>
+
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+
+  import {
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+  import {
+    collection, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  import {
+    doc, setDoc, getDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const listDiv = document.getElementById("list");
+  let currentUid = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      alert("Bạn chưa đăng nhập!");
+      location.href = "login.html";
+      return;
+    }
+
+    currentUid = user.uid;
+
+    // Realtime load tất cả users
+    onSnapshot(collection(db, "users"), async (snap) => {
+      listDiv.innerHTML = "";
+
+      snap.forEach(docUser => {
+        const data = docUser.data();
+        const uid = docUser.id;
+
+        if (uid === currentUid) return; // bỏ chính mình
+
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        card.innerHTML = `
+          <div class="name">${data.name || "Chưa đặt tên"}</div>
+          <div class="info">Tuổi: ${data.age || "?"}</div>
+          <div class="info">Giới tính: ${data.gender || "?"}</div>
+          <div class="info">${data.bio || ""}</div>
+        `;
+
+        // NÚT THẢ TIM
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "btn";
+        likeBtn.innerText = "💗 Thả tim";
+
+        likeBtn.onclick = () => likeUser(uid);
+
+        card.appendChild(likeBtn);
+
+        // kiểm tra đã match chưa
+        checkMatch(uid).then(matchId => {
+          if (matchId) {
+            const chatBtn = document.createElement("button");
+            chatBtn.className = "btn btn-chat";
+            chatBtn.innerText = "💬 Chat ngay";
+            chatBtn.onclick = () => {
+              window.location.href = `chat.html?match=${matchId}`;
+            };
+            card.appendChild(chatBtn);
+          }
+        });
+
+        listDiv.appendChild(card);
+      });
+    });
+  });
+
+  // Like function (dùng code B7)
+  window.likeUser = async (targetUid) => {
+    const myUid = currentUid;
+
+    await setDoc(doc(db, "likes", `${myUid}_${targetUid}`), {
+      from: myUid,
+      to: targetUid,
+      time: serverTimestamp()
+    });
+
+    const reverse = await getDoc(doc(db, "likes", `${targetUid}_${myUid}`));
+
+    if (reverse.exists()) {
+      const matchId = `${myUid}_${targetUid}`;
+
+      await setDoc(doc(db, "matches", matchId), {
+        users: [myUid, targetUid],
+        time: serverTimestamp()
+      });
+
+      alert("🎉 MATCH THÀNH CÔNG!");
+      location.reload();
+    } else {
+      alert("💗 Đã thả tim! Chờ đối phương thả tim lại.");
+    }
+  };
+
+  // Kiểm tra đã match chưa
+  async function checkMatch(otherUid) {
+    const myUid = currentUid;
+
+    // match id có thể là A_B hoặc B_A
+    const m1 = await getDoc(doc(db, "matches", `${myUid}_${otherUid}`));
+    if (m1.exists()) return `${myUid}_${otherUid}`;
+
+    const m2 = await getDoc(doc(db, "matches", `${otherUid}_${myUid}`));
+    if (m2.exists()) return `${otherUid}_${myUid}`;
+
+    return null;
+  }
+</script>
+
+</body>
+</html>
