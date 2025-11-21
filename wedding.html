@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Hôn lễ</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background:#0f1115;
+      color:white;
+      padding-bottom:70px;
+    }
+    header{
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      position: sticky; top:0; z-index:5;
+    }
+    header h1{ margin:0; font-size:20px; }
+    header a{
+      color:white; text-decoration:none; font-weight:bold;
+      background: rgba(255,255,255,0.15);
+      padding:6px 10px; border-radius:999px; font-size:14px;
+    }
+
+    .wrap{
+      max-width:1000px;
+      margin:14px auto;
+      padding:0 14px;
+      display:grid; gap:14px;
+    }
+    .card{
+      background:#151824;
+      border-radius:16px;
+      padding:14px;
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow:0 8px 20px rgba(0,0,0,0.25);
+    }
+    .title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .title h2{ margin:0; font-size:18px; color:#ffd1e6; }
+    .sub{ font-size:14px; opacity:.8; line-height:1.5; }
+
+    .grid{
+      display:grid; grid-template-columns: repeat(3,1fr); gap:10px;
+    }
+    .item{
+      background: rgba(255,255,255,0.06);
+      padding:12px;
+      border-radius:14px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:120px;
+      border:1px solid transparent;
+      cursor:pointer;
+    }
+    .item.active{
+      border:1px solid #ff8ac9;
+      background: rgba(255,61,127,0.15);
+    }
+    .item b{ font-size:16px; }
+    .price{ font-weight:900; color:#ffd1e6; }
+    .item small{ opacity:.8; }
+
+    .bar{
+      display:flex; gap:8px; flex-wrap:wrap; font-size:14px;
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:12px;
+    }
+    .pill{
+      background: rgba(255,255,255,0.1);
+      padding:6px 10px; border-radius:999px; font-weight:bold;
+    }
+
+    .btn{
+      width:100%;
+      border:none; cursor:pointer; font-weight:bold;
+      padding:12px 10px; border-radius:12px;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      color:white; font-size:16px;
+      margin-top:10px;
+    }
+    .btn.light{
+      background: rgba(255,255,255,0.08);
+      font-size:15px;
+    }
+
+    /* popup */
+    .popup{
+      position: fixed; inset:0; background: rgba(0,0,0,0.6);
+      display:none; align-items:center; justify-content:center; z-index:10;
+      padding:14px;
+    }
+    .popup .box{
+      width:100%; max-width:420px;
+      background:#151824; border-radius:16px; padding:14px;
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    .popup h3{ margin-top:0; }
+    .popup button{
+      width:100%; padding:10px; margin-top:8px; border-radius:12px;
+      border:none; cursor:pointer; font-weight:bold;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9); color:white;
+    }
+    .popup .close{ background: rgba(255,255,255,0.08); }
+
+    /* menu dưới */
+    .nav{
+      display:flex; justify-content:space-around;
+      background:white; border-top:1px solid #eee;
+      padding:8px 0; font-size:13px;
+      position: fixed; left:0; right:0; bottom:0;
+    }
+    .nav a{
+      text-decoration:none; color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px; font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
+
+    @media (max-width:820px){
+      .grid{ grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html">← Hồ sơ</a>
+  <h1>NearLove • Hôn lễ</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="wrap">
+
+  <!-- Trạng thái -->
+  <div class="bar card">
+    <div class="pill">Trạng thái: <span id="status">Độc thân</span> 💔</div>
+    <div class="pill">Xu: <span id="coins">1200</span> 💰</div>
+    <div class="pill">Cặp đôi: <span id="partner">Chưa có</span></div>
+  </div>
+
+  <!-- Chọn đối tượng kết hôn -->
+  <div class="card">
+    <div class="title">
+      <h2>💍 Chọn người kết hôn</h2>
+      <div class="sub">Demo danh sách người đã match</div>
+    </div>
+
+    <div class="grid" id="partners">
+      <div class="item" data-name="Linh">
+        <b>Linh 💗</b>
+        <small>Online • 21 tuổi</small>
+        <div class="sub">Hợp vibes, thích du lịch.</div>
+      </div>
+
+      <div class="item" data-name="Hà">
+        <b>Hà 😊</b>
+        <small>VIP cao • 23 tuổi</small>
+        <div class="sub">Thích game, vui tính.</div>
+      </div>
+
+      <div class="item" data-name="Vy">
+        <b>Vy 🌸</b>
+        <small>Đà Nẵng • 20 tuổi</small>
+        <div class="sub">Yêu biển & ăn vặt.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chọn nhẫn -->
+  <div class="card">
+    <div class="title">
+      <h2>💎 Chọn nhẫn cưới</h2>
+      <div class="sub">Tối thiểu cần 1 nhẫn để cưới</div>
+    </div>
+
+    <div class="grid" id="rings">
+      <div class="item active" data-cost="300" data-ring="Nhẫn Bạc">
+        <b>Nhẫn Bạc 💍</b>
+        <small>Thường</small>
+        <div class="price">300 xu</div>
+      </div>
+
+      <div class="item" data-cost="700" data-ring="Nhẫn Vàng">
+        <b>Nhẫn Vàng 💛</b>
+        <small>Hiếm</small>
+        <div class="price">700 xu</div>
+      </div>
+
+      <div class="item" data-cost="1500" data-ring="Nhẫn Kim Cương">
+        <b>Nhẫn Kim Cương 💎</b>
+        <small>Siêu hiếm</small>
+        <div class="price">1500 xu</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chọn xe cưới -->
+  <div class="card">
+    <div class="title">
+      <h2>🚗 Chọn xe cưới</h2>
+      <div class="sub">Xe càng VIP càng được chú ý trên BXH</div>
+    </div>
+
+    <div class="grid" id="cars">
+      <div class="item active" data-cost="0" data-car="Xe máy đôi">
+        <b>Xe máy đôi 🛵</b>
+        <small>Miễn phí</small>
+        <div class="price">0 xu</div>
+      </div>
+
+      <div class="item" data-cost="500" data-car="Ô tô hồng">
+        <b>Ô tô hồng 🚘</b>
+        <small>VIP nhẹ</small>
+        <div class="price">500 xu</div>
+      </div>
+
+      <div class="item" data-cost="2000" data-car="Du thuyền cưới">
+        <b>Du thuyền cưới 🛥️</b>
+        <small>VIP cao</small>
+        <div class="price">2000 xu</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiệc cưới -->
+  <div class="card">
+    <div class="title">
+      <h2>🎉 Tiệc cưới</h2>
+      <div class="sub">Chọn gói tiệc để nhận quà & xu</div>
+    </div>
+
+    <div class="grid" id="party">
+      <div class="item active" data-cost="200" data-party="Tiệc nhỏ">
+        <b>Tiệc nhỏ 🥂</b>
+        <small>10 khách mời</small>
+        <div class="price">200 xu</div>
+      </div>
+
+      <div class="item" data-cost="800" data-party="Tiệc lớn">
+        <b>Tiệc lớn 🎊</b>
+        <small>50 khách mời</small>
+        <div class="price">800 xu</div>
+      </div>
+
+      <div class="item" data-cost="2000" data-party="Tiệc Hoàng Gia">
+        <b>Tiệc Hoàng Gia 👑</b>
+        <small>200 khách mời</small>
+        <div class="price">2000 xu</div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="marry()">💗 TỔ CHỨC HÔN LỄ</button>
+    <button class="btn light" onclick="divorce()">💔 LY HÔN (demo)</button>
+  </div>
+
+</div>
+
+<!-- popup -->
+<div class="popup" id="popup">
+  <div class="box">
+    <h3 id="popTitle">Hôn lễ</h3>
+    <p id="popText" style="opacity:.9; line-height:1.5;"></p>
+    <button onclick="closePop()">OK</button>
+    <button class="close" onclick="closePop()">Đóng</button>
+  </div>
+</div>
+
+<!-- menu dưới -->
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a href="game.html">🎮<span>Game</span></a>
+  <a href="event.html">🏆<span>BXH</span></a>
+  <a href="shop.html">🛒<span>Shop</span></a>
+  <a class="active" href="wedding.html">💍<span>Cưới</span></a>
+</div>
+
+<script>
+  let coins = 1200;
+  let married = false;
+  let partner = null;
+
+  const coinsEl = document.getElementById("coins");
+  const statusEl = document.getElementById("status");
+  const partnerEl = document.getElementById("partner");
+
+  function showPop(title, text){
+    document.getElementById("popTitle").innerText = title;
+    document.getElementById("popText").innerText = text;
+    document.getElementById("popup").style.display = "flex";
+  }
+  function closePop(){
+    document.getElementById("popup").style.display = "none";
+  }
+
+  function spendCoins(x){
+    if(coins < x){
+      showPop("Thiếu xu 😭","Bạn không đủ xu. Hãy vào Shop hoặc Mini Game kiếm thêm nhé!");
+      return false;
+    }
+    coins -= x;
+    coinsEl.innerText = coins;
+    return true;
+  }
+
+  function pickGroup(id){
+    const box = document.getElementById(id);
+    box.querySelectorAll(".item").forEach(it=>{
+      it.onclick = () => {
+        box.querySelectorAll(".item").forEach(x=>x.classList.remove("active"));
+        it.classList.add("active");
+        if(id==="partners") partner = it.dataset.name;
+      };
+    });
+  }
+
+  pickGroup("partners");
+  pickGroup("rings");
+  pickGroup("cars");
+  pickGroup("party");
+
+  function getActive(id){
+    return document.querySelector("#"+id+" .item.active");
+  }
+
+  function marry(){
+    if(married){
+      showPop("Bạn đã kết hôn rồi 💗","Muốn cưới người khác thì ly hôn trước nha.");
+      return;
+    }
+    if(!partner){
+      showPop("Chưa chọn người 😅","Bạn hãy chọn 1 người để kết hôn.");
+      return;
+    }
+
+    const ring = getActive("rings");
+    const car = getActive("cars");
+    const party = getActive("party");
+
+    const cost =
+      Number(ring.dataset.cost) +
+      Number(car.dataset.cost) +
+      Number(party.dataset.cost);
+
+    if(!spendCoins(cost)) return;
+
+    married = true;
+    statusEl.innerText = "Đã kết hôn";
+    partnerEl.innerText = partner;
+
+    showPop(
+      "Hôn lễ thành công 🎉",
+      `Bạn đã cưới ${partner}!\n\nNhẫn: ${ring.dataset.ring}\nXe cưới: ${car.dataset.car}\nTiệc: ${party.dataset.party}\n\nTổng chi: ${cost} xu`
+    );
+  }
+
+  function divorce(){
+    if(!married){
+      showPop("Bạn đang độc thân 😄","Chưa kết hôn nên không thể ly hôn.");
+      return;
+    }
+    married = false;
+    partner = null;
+    statusEl.innerText = "Độc thân";
+    partnerEl.innerText = "Chưa có";
+    showPop("Ly hôn thành công 💔","Trạng thái đã trở về độc thân (demo).");
+  }
+</script>
+
+</body>
+</html>
