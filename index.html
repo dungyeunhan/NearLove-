@@ -13,20 +13,17 @@
       background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
       color: white;
       text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    header {
-      padding: 50px 20px 30px;
-    }
-    h1 {
-      font-size: 46px;
-      margin: 0 0 10px;
-      letter-spacing: 1px;
-    }
+    header { padding: 50px 20px 30px; }
+    h1 { font-size: 46px; margin: 0 0 10px; letter-spacing: 1px; }
     p { font-size: 18px; opacity: 0.95; }
 
     .btn {
       display: inline-block;
-      margin-top: 20px;
+      margin-top: 14px;
       padding: 14px 28px;
       background: white;
       color: #ff2e73;
@@ -35,13 +32,15 @@
       text-decoration: none;
       font-size: 18px;
       transition: 0.2s;
+      min-width: 180px;
     }
     .btn:hover { transform: scale(1.05); }
 
     .wrap {
       max-width: 900px;
       margin: auto;
-      padding: 0 14px 40px;
+      padding: 0 14px 80px;
+      width: 100%;
     }
     .card {
       background: rgba(255,255,255,0.15);
@@ -51,17 +50,30 @@
       text-align: left;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
-    .card h2 {
-      margin-top: 0;
-      font-size: 22px;
-    }
+    .card h2 { margin-top: 0; font-size: 22px; }
     .feature { margin: 8px 0; font-size: 17px; }
 
-    footer {
-      padding: 20px 0 40px;
-      font-size: 14px;
-      opacity: 0.8;
+    footer { margin: 30px 0 80px; opacity: 0.8; font-size: 14px; }
+
+    /* Menu dưới kiểu app */
+    .nav{
+      display:flex;
+      justify-content:space-around;
+      background:white;
+      border-top:1px solid #eee;
+      padding:8px 0;
+      font-size:13px;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
     }
+    .nav a{
+      text-decoration:none;
+      color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px;
+      font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
   </style>
 </head>
 <body>
@@ -70,14 +82,16 @@
     <h1>NearLove 💗</h1>
     <p>Ứng dụng hẹn hò hiện đại kết hợp game & thế giới ảo</p>
 
-    <!-- Hai nút điều hướng -->
     <a class="btn" href="signup.html">Đăng ký</a>
-    <br/><br/>
+    <br>
     <a class="btn" href="login.html">Đăng nhập</a>
+    <br>
+    <a class="btn" href="profile.html">Xem hồ sơ demo</a>
+    <br>
+    <a class="btn" href="match.html">Ghép đôi demo</a>
   </header>
 
   <div class="wrap">
-
     <div class="card" id="features">
       <h2>✨ Tính năng NearLove</h2>
       <div class="feature">✅ Đăng ký / đăng nhập nhanh</div>
@@ -103,12 +117,20 @@
       <p>• Mở hệ thống sự kiện, bang hội</p>
       <p>• Kinh tế xu, đấu giá vật phẩm</p>
     </div>
-
   </div>
 
   <footer>
     © 2025 NearLove Demo — made by bạn
   </footer>
+
+  <!-- Menu dưới -->
+  <div class="nav">
+    <a class="active" href="index.html">🏠<span>Home</span></a>
+    <a href="match.html">💗<span>Match</span></a>
+    <a href="chat.html">💬<span>Chat</span></a>
+    <a href="vip.html">👑<span>VIP</span></a>
+    <a href="profile.html">👤<span>Profile</span></a>
+  </div>
 
 </body>
 </html>
