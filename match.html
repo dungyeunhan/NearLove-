@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Ghép đôi</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f7fb;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px;
+    }
+    header {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 10px 0 14px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #ff2e73;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    header a {
+      text-decoration: none;
+      color: #222;
+      font-weight: bold;
+      background: white;
+      padding: 8px 12px;
+      border-radius: 999px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      position: relative;
+    }
+    .photo {
+      width: 100%;
+      height: 420px;
+      object-fit: cover;
+      background: #eee;
+    }
+    .info {
+      padding: 14px 14px 16px;
+    }
+    .name {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0;
+    }
+    .sub {
+      margin: 6px 0 0;
+      opacity: 0.8;
+      font-size: 15px;
+    }
+    .bio {
+      margin-top: 10px;
+      font-size: 15px;
+      line-height: 1.5;
+      background: #f6f7fb;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    .badge {
+      position: absolute;
+      top: 16px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: 1px;
+      display: none;
+    }
+    .badge.like { right: 16px; background: #2ecc71; }
+    .badge.nope { left: 16px; background: #ff4757; }
+
+    .actions {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+      transition: 0.12s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-nope { background: white; color: #ff4757; }
+    .btn-like { background: linear-gradient(135deg, #ff3d7f, #ff8ac9); color: white; }
+
+    .hint {
+      margin-top: 10px;
+      opacity: 0.7;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html">← Hồ sơ</a>
+  <h1>NearLove • Ghép đôi</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="card">
+  <div class="badge like" id="likeBadge">LIKE</div>
+  <div class="badge nope" id="nopeBadge">NOPE</div>
+
+  <img id="photo" class="photo" src="" alt="photo" />
+  <div class="info">
+    <p class="name" id="name"></p>
+    <p class="sub" id="sub"></p>
+    <div class="bio" id="bio"></div>
+  </div>
+</div>
+
+<div class="actions">
+  <button class="btn btn-nope" onclick="nope()">❌ Bỏ qua</button>
+  <button class="btn btn-like" onclick="like()">💗 Thích</button>
+</div>
+
+<div class="hint">Bạn đang dùng bản demo. Bấm Like/Nope để xem người tiếp theo.</div>
+
+<script>
+  // Danh sách người demo
+  const users = [
+    {
+      name: "Linh, 21",
+      sub: "TP.HCM • Thích mèo • Online",
+      bio: "Mình thích café, chụp ảnh và đi du lịch. Muốn tìm người nói chuyện hợp vibes.",
+      photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=1200&auto=format&fit=crop"
+    },
+    {
+      name: "Hà, 23",
+      sub: "Hà Nội • Thích game • VIP Công Nhân",
+      bio: "Đi làm ngày, tối chill game. Thích người vui vẻ, tử tế.",
+      photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1200&auto=format&fit=crop"
+    },
+    {
+      name: "Vy, 20",
+      sub: "Đà Nẵng • Yêu biển • Online",
+      bio: "Nếu bạn thích đi dạo biển + ăn vặt thì kết mình nha 😄",
+      photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1200&auto=format&fit=crop"
+    },
+    {
+      name: "Trang, 24",
+      sub: "Cần Thơ • Thích phim Hàn • VIP Doanh Nhân",
+      bio: "Thích xem phim buổi tối và nói chuyện nhẹ nhàng.",
+      photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?q=80&w=1200&auto=format&fit=crop"
+    }
+  ];
+
+  let i = 0;
+
+  function render() {
+    const u = users[i];
+    document.getElementById("name").innerText = u.name;
+    document.getElementById("sub").innerText = u.sub;
+    document.getElementById("bio").innerText = u.bio;
+    document.getElementById("photo").src = u.photo;
+  }
+
+  function flash(badgeId) {
+    const b = document.getElementById(badgeId);
+    b.style.display = "block";
+    setTimeout(() => b.style.display = "none", 500);
+  }
+
+  function nextUser() {
+    i++;
+    if (i >= users.length) i = 0;
+    render();
+  }
+
+  function like() {
+    flash("likeBadge");
+    setTimeout(nextUser, 550);
+  }
+
+  function nope() {
+    flash("nopeBadge");
+    setTimeout(nextUser, 550);
+  }
+
+  render();
+</script>
+
+</body>
+</html>
