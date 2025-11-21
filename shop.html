@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearLove - Shop Xu & Vật phẩm</title>
+
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background:#0f1115;
+      color:white;
+      padding-bottom:70px;
+    }
+
+    header{
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      position: sticky; top:0; z-index:5;
+    }
+    header h1{ margin:0; font-size:20px; }
+    header a{
+      color:white; text-decoration:none; font-weight:bold;
+      background: rgba(255,255,255,0.15);
+      padding:6px 10px; border-radius:999px; font-size:14px;
+    }
+
+    .wrap{
+      max-width:1000px;
+      margin:14px auto;
+      padding:0 14px;
+      display:grid; gap:14px;
+    }
+
+    .card{
+      background:#151824;
+      border-radius:16px;
+      padding:14px;
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow:0 8px 20px rgba(0,0,0,0.25);
+    }
+    .title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .title h2{ margin:0; font-size:18px; color:#ffd1e6; }
+    .sub{ font-size:14px; opacity:.8; }
+
+    .bar{
+      display:flex; gap:8px; flex-wrap:wrap; font-size:14px;
+      background: rgba(255,255,255,0.06);
+      padding:10px; border-radius:12px;
+    }
+    .pill{
+      background: rgba(255,255,255,0.1);
+      padding:6px 10px; border-radius:999px; font-weight:bold;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3,1fr);
+      gap:10px;
+    }
+    .item{
+      background: rgba(255,255,255,0.06);
+      padding:12px;
+      border-radius:14px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:130px;
+    }
+    .item b{ font-size:16px; }
+    .price{ font-weight:900; color:#ffd1e6; }
+    .item button{
+      margin-top:auto;
+      border:none; cursor:pointer; font-weight:bold;
+      padding:8px 10px; border-radius:10px;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      color:white;
+    }
+
+    /* gacha */
+    .gacha{
+      display:grid; grid-template-columns: 1.2fr 1fr; gap:10px; align-items:center;
+    }
+    .gacha-box{
+      background: rgba(255,255,255,0.06);
+      padding:14px; border-radius:14px;
+      display:grid; gap:8px;
+    }
+    .big-btn{
+      width:100%;
+      border:none; cursor:pointer; font-weight:bold;
+      padding:12px 10px; border-radius:12px;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
+      color:white; font-size:16px;
+    }
+    .reward{
+      background: rgba(0,0,0,0.35);
+      padding:10px; border-radius:10px; min-height:54px;
+      font-size:15px; line-height:1.5;
+    }
+
+    /* popup */
+    .popup{
+      position: fixed; inset:0; background: rgba(0,0,0,0.6);
+      display:none; align-items:center; justify-content:center; z-index:10;
+      padding:14px;
+    }
+    .popup .box{
+      width:100%; max-width:420px;
+      background:#151824; border-radius:16px; padding:14px;
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    .popup h3{ margin-top:0; }
+    .popup button{
+      width:100%; padding:10px; margin-top:8px; border-radius:12px;
+      border:none; cursor:pointer; font-weight:bold;
+      background: linear-gradient(135deg,#ff3d7f,#ff8ac9); color:white;
+    }
+    .popup .close{ background: rgba(255,255,255,0.08); }
+
+    /* menu dưới */
+    .nav{
+      display:flex; justify-content:space-around;
+      background:white; border-top:1px solid #eee;
+      padding:8px 0; font-size:13px;
+      position: fixed; left:0; right:0; bottom:0;
+    }
+    .nav a{
+      text-decoration:none; color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px; font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
+
+    @media (max-width:820px){
+      .grid{ grid-template-columns: repeat(2,1fr); }
+      .gacha{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html">← Hồ sơ</a>
+  <h1>NearLove • Shop</h1>
+  <a href="index.html">Trang chủ</a>
+</header>
+
+<div class="wrap">
+
+  <!-- Thanh trạng thái -->
+  <div class="bar card">
+    <div class="pill">VIP: Nông Dân</div>
+    <div class="pill">Xu hiện có: <span id="coins">1200</span> 💰</div>
+    <div class="pill">Túi đồ: <span id="bagCount">0</span> 🎒</div>
+  </div>
+
+  <!-- Mua xu -->
+  <div class="card">
+    <div class="title">
+      <h2>💰 Mua Xu</h2>
+      <div class="sub">Nạp xu để chơi & tặng quà</div>
+    </div>
+
+    <div class="grid">
+      <div class="item">
+        <b>Gói 1</b>
+        <div class="sub">+500 xu</div>
+        <div class="price">9.000đ</div>
+        <button onclick="buyCoins(500)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Gói 2</b>
+        <div class="sub">+2.000 xu</div>
+        <div class="price">29.000đ</div>
+        <button onclick="buyCoins(2000)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Gói 3</b>
+        <div class="sub">+10.000 xu</div>
+        <div class="price">99.000đ</div>
+        <button onclick="buyCoins(10000)">Mua</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vật phẩm -->
+  <div class="card">
+    <div class="title">
+      <h2>🎁 Vật phẩm</h2>
+      <div class="sub">Dùng để tặng & trang trí hồ sơ</div>
+    </div>
+
+    <div class="grid">
+      <div class="item">
+        <b>Hoa Hồng 🌹</b>
+        <div class="sub">Tặng người bạn thích</div>
+        <div class="price">100 xu</div>
+        <button onclick="buyItem('Hoa Hồng 🌹',100)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Gấu Bông 🧸</b>
+        <div class="sub">Tăng thiện cảm</div>
+        <div class="price">250 xu</div>
+        <button onclick="buyItem('Gấu Bông 🧸',250)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Nhẫn Cưới 💍</b>
+        <div class="sub">Dành cho hôn lễ</div>
+        <div class="price">500 xu</div>
+        <button onclick="buyItem('Nhẫn Cưới 💍',500)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Skin Hồ Sơ ✨</b>
+        <div class="sub">Làm hồ sơ phát sáng</div>
+        <div class="price">800 xu</div>
+        <button onclick="buyItem('Skin Hồ Sơ ✨',800)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Vé Party 🎉</b>
+        <div class="sub">Vào phòng party VIP</div>
+        <div class="price">300 xu</div>
+        <button onclick="buyItem('Vé Party 🎉',300)">Mua</button>
+      </div>
+
+      <div class="item">
+        <b>Thức ăn thú cưng 🐾</b>
+        <div class="sub">Nuôi pet tăng cấp</div>
+        <div class="price">150 xu</div>
+        <button onclick="buyItem('Thức ăn thú cưng 🐾',150)">Mua</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gacha -->
+  <div class="card">
+    <div class="title">
+      <h2>🎲 Hộp bí ẩn (Gacha)</h2>
+      <div class="sub">Quay nhận vật phẩm hiếm</div>
+    </div>
+
+    <div class="gacha">
+      <div class="gacha-box">
+        <div class="sub">Mỗi lượt quay: <b>200 xu</b></div>
+        <button class="big-btn" onclick="roll()">Quay 1 lần</button>
+        <button class="big-btn" onclick="roll10()">Quay 10 lần (tiết kiệm)</button>
+      </div>
+
+      <div class="reward" id="reward">
+        Nhấn “Quay” để nhận vật phẩm ngẫu nhiên nhé 😄
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- popup -->
+<div class="popup" id="popup">
+  <div class="box">
+    <h3 id="popTitle">Shop</h3>
+    <p id="popText" style="opacity:.9; line-height:1.5;"></p>
+    <button onclick="closePop()">OK</button>
+    <button class="close" onclick="closePop()">Đóng</button>
+  </div>
+</div>
+
+<!-- menu dưới -->
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a href="vip.html">👑<span>VIP</span></a>
+  <a href="game.html">🎮<span>Game</span></a>
+  <a href="event.html">🏆<span>BXH</span></a>
+  <a class="active" href="shop.html">🛒<span>Shop</span></a>
+</div>
+
+<script>
+  let coins = 1200;
+  let bag = [];
+  const coinsEl = document.getElementById("coins");
+  const bagEl = document.getElementById("bagCount");
+  const rewardEl = document.getElementById("reward");
+
+  function showPop(title, text){
+    document.getElementById("popTitle").innerText = title;
+    document.getElementById("popText").innerText = text;
+    document.getElementById("popup").style.display = "flex";
+  }
+  function closePop(){
+    document.getElementById("popup").style.display = "none";
+  }
+
+  function addCoins(x){
+    coins += x;
+    coinsEl.innerText = coins;
+  }
+  function spendCoins(x){
+    if(coins < x){
+      showPop("Thiếu xu 😭","Bạn không đủ xu. Hãy nạp hoặc chơi mini game nhé!");
+      return false;
+    }
+    coins -= x;
+    coinsEl.innerText = coins;
+    return true;
+  }
+
+  function buyCoins(x){
+    addCoins(x);
+    showPop("Nạp xu ✅", "Bạn đã nhận +" + x + " xu (demo).");
+  }
+
+  function buyItem(name, cost){
+    if(!spendCoins(cost)) return;
+    bag.push(name);
+    bagEl.innerText = bag.length;
+    showPop("Mua vật phẩm ✅", "Bạn đã mua: " + name);
+  }
+
+  const pool = [
+    {name:"Hoa Hồng 🌹", rarity:"Thường"},
+    {name:"Gấu Bông 🧸", rarity:"Thường"},
+    {name:"Nhẫn Cưới 💍", rarity:"Hiếm"},
+    {name:"Skin Hồ Sơ ✨", rarity:"Hiếm"},
+    {name:"Cáo Tuyết 🦊", rarity:"Cực hiếm"},
+    {name:"Rồng Mini 🐉", rarity:"Siêu hiếm"},
+    {name:"Du thuyền ảo 🛥️", rarity:"Siêu hiếm"}
+  ];
+
+  function rollOnce(){
+    const r = pool[Math.floor(Math.random()*pool.length)];
+    bag.push(r.name);
+    bagEl.innerText = bag.length;
+    return r;
+  }
+
+  function roll(){
+    if(!spendCoins(200)) return;
+    const r = rollOnce();
+    rewardEl.innerHTML = "🎁 Bạn nhận được: <b>" + r.name + "</b><br/>Độ hiếm: " + r.rarity;
+  }
+
+  function roll10(){
+    if(!spendCoins(1800)) return; // 10 lần giảm giá
+    let res = [];
+    for(let i=0;i<10;i++){
+      res.push(rollOnce().name);
+    }
+    rewardEl.innerHTML = "🎁 Kết quả 10 lần quay:<br/>" + res.join(" • ");
+  }
+</script>
+
+</body>
+</html>
