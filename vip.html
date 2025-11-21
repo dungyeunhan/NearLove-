@@ -12,11 +12,14 @@
       background: #0f1115;
       color: white;
       padding: 18px;
+      padding-bottom: 80px;
     }
     header{
       max-width: 980px;
       margin: 0 auto 14px;
       display:flex; align-items:center; justify-content:space-between;
+      position: sticky; top:0; z-index:10;
+      background:#0f1115; padding:8px 0;
     }
     header h1{ margin:0; font-size:22px; color:#ff8ac9; }
     header a{
@@ -51,6 +54,25 @@
       font-size:14px; opacity:0.7;
       background: rgba(255,255,255,0.06); padding:10px; border-radius:12px;
     }
+
+    .nav{
+      display:flex;
+      justify-content:space-around;
+      background:white;
+      border-top:1px solid #eee;
+      padding:8px 0;
+      font-size:13px;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+    }
+    .nav a{
+      text-decoration:none;
+      color:#666;
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px;
+      font-weight:bold;
+    }
+    .nav a.active{ color:#ff2e73; }
   </style>
 </head>
 <body>
@@ -146,6 +168,14 @@
 <div class="note">
   Đây là bản demo hiển thị VIP. Sau này khi có backend, nút “Nâng cấp”
   sẽ kết nối thanh toán thật (Momo/ZaloPay/VNPay).
+</div>
+
+<div class="nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="match.html">💗<span>Match</span></a>
+  <a href="chat.html">💬<span>Chat</span></a>
+  <a class="active" href="vip.html">👑<span>VIP</span></a>
+  <a href="profile.html">👤<span>Profile</span></a>
 </div>
 
 </body>
