@@ -1,70 +1,67 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NearLove - Đăng nhập</title>
-  <style>
-    body {
-      margin: 0;
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      font-family: Arial, sans-serif;
-      color: white;
-      text-align: center;
-      padding: 40px 16px;
-      min-height: 100vh;
-    }
-    .box {
-      background: rgba(255,255,255,0.2);
-      padding: 22px;
-      border-radius: 18px;
-      max-width: 420px;
-      margin: 20px auto;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.2);
-    }
-    input {
-      width: 92%;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 10px;
-      border: none;
-      font-size: 16px;
-      outline: none;
-    }
-    .btn {
-      width: 92%;
-      background: white;
-      color: #ff2e73;
-      padding: 12px;
-      border-radius: 25px;
-      font-size: 18px;
-      text-decoration: none;
-      font-weight: bold;
-      display: inline-block;
-      margin-top: 12px;
-    }
-    .link {
-      display: block;
-      margin-top: 12px;
-      color: white;
-      text-decoration: underline;
-      opacity: 0.95;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>NearLove - Đăng nhập</title>
+
+<style>
+  body { font-family: Arial; padding:20px; background:#ffe6f2; }
+  h2 { text-align:center; }
+  .input {
+    width:100%; padding:12px; margin:8px 0;
+    border-radius:10px; border:1px solid #ccc;
+  }
+  .btn {
+    width:100%; padding:14px;
+    border:none; border-radius:10px;
+    background:#ff2e73; color:white; font-weight:bold;
+    margin-top:10px; font-size:16px;
+  }
+  #msg { margin-top:10px; font-size:14px; }
+</style>
+
 </head>
+
 <body>
 
-  <h1>Đăng nhập NearLove 💗</h1>
-  <p>Chào mừng bạn quay lại</p>
+<h2>Đăng nhập NearLove 🔐</h2>
 
-  <div class="box">
-    <input type="email" placeholder="Email" />
-    <input type="password" placeholder="Mật khẩu" />
+<input id="email" class="input" placeholder="Email">
+<input id="pass" class="input" type="password" placeholder="Mật khẩu">
 
-    <a class="btn" href="profile.html">Đăng nhập</a>
-    <a class="link" href="signup.html">Chưa có tài khoản? Đăng ký</a>
-    <a class="link" href="index.html">← Quay về trang chủ</a>
-  </div>
+<button class="btn" onclick="login()">Đăng nhập</button>
+
+<p id="msg"></p>
+
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
+
+<!-- Xử lý đăng nhập -->
+<script type="module">
+  import { auth } from "./firebase.js";
+  import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+  const msg = document.getElementById("msg");
+
+  window.login = async () => {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("pass").value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      msg.style.color = "green";
+      msg.innerText = "Đăng nhập thành công!";
+
+      setTimeout(() => {
+        window.location.href = "profile.html";
+      }, 1000);
+
+    } catch (err) {
+      msg.style.color = "red";
+      msg.innerText = err.message;
+    }
+  }
+</script>
 
 </body>
 </html>
