@@ -1,327 +1,240 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NearLove - BXH & Sự kiện</title>
+<meta charset="UTF-8" />
+<title>NearLove - Sự kiện & BXH</title>
 
-  <style>
-    * { box-sizing: border-box; }
-    body{
-      margin:0;
-      font-family: Arial, sans-serif;
-      background: #0f1115;
-      color: white;
-      padding-bottom: 70px;
-    }
-
-    header{
-      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
-      padding:14px 16px;
-      display:flex; align-items:center; justify-content:space-between;
-      position: sticky; top:0; z-index:5;
-    }
-    header h1{ margin:0; font-size:20px; }
-    header a{
-      color:white; text-decoration:none; font-weight:bold;
-      background: rgba(255,255,255,0.15);
-      padding:6px 10px; border-radius:999px; font-size:14px;
-    }
-
-    .wrap{
-      max-width: 1000px;
-      margin: 14px auto;
-      padding: 0 14px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .card{
-      background:#151824;
-      border-radius:16px;
-      padding:14px;
-      border:1px solid rgba(255,255,255,0.06);
-      box-shadow:0 8px 20px rgba(0,0,0,0.25);
-    }
-    .title{
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:10px;
-    }
-    .title h2{ margin:0; font-size:18px; color:#ffd1e6; }
-    .sub{ font-size:14px; opacity:0.8; }
-
-    /* bảng xếp hạng */
-    .rank{
-      display:grid;
-      gap:8px;
-    }
-    .rank-item{
-      display:flex; align-items:center; gap:10px;
-      padding:10px;
-      border-radius:12px;
-      background: rgba(255,255,255,0.06);
-    }
-    .top{
-      background: linear-gradient(135deg,rgba(255,61,127,0.35),rgba(255,138,201,0.35));
-      border:1px solid rgba(255,255,255,0.12);
-    }
-    .num{
-      font-weight:900; font-size:18px; width:28px; text-align:center;
-      color:#ff8ac9;
-    }
-    .avatar{
-      width:46px; height:46px; border-radius:50%;
-      object-fit:cover; background:#eee;
-      border:2px solid rgba(255,255,255,0.6);
-    }
-    .info{ flex:1; }
-    .name{ font-weight:800; }
-    .tag{
-      font-size:12px; opacity:.8;
-      background: rgba(255,255,255,0.08);
-      display:inline-block; padding:2px 6px; border-radius:999px; margin-top:4px;
-    }
-    .score{
-      font-weight:900; color:#ffd1e6;
-    }
-
-    /* sự kiện */
-    .events{
-      display:grid;
-      grid-template-columns: repeat(2,1fr);
-      gap:10px;
-    }
-    .event{
-      background: rgba(255,255,255,0.06);
-      padding:12px;
-      border-radius:14px;
-      display:flex; flex-direction:column; gap:6px;
-      min-height: 140px;
-    }
-    .event b{ font-size:16px; }
-    .event .time{ font-size:13px; opacity:.8; }
-    .event button{
-      margin-top:auto;
-      border:none; cursor:pointer; font-weight:bold;
-      padding:8px 10px; border-radius:10px;
-      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
-      color:white;
-    }
-
-    /* popup */
-    .popup{
-      position: fixed; inset:0; background: rgba(0,0,0,0.6);
-      display:none; align-items:center; justify-content:center; z-index:10;
-      padding:14px;
-    }
-    .popup .box{
-      width:100%; max-width:420px;
-      background:#151824; border-radius:16px; padding:14px;
-      border:1px solid rgba(255,255,255,0.08);
-    }
-    .popup h3{ margin-top:0; }
-    .popup button{
-      width:100%; padding:10px; margin-top:8px; border-radius:12px;
-      border:none; cursor:pointer; font-weight:bold;
-      background: linear-gradient(135deg,#ff3d7f,#ff8ac9); color:white;
-    }
-    .popup .close{ background: rgba(255,255,255,0.08); }
-
-    /* menu dưới */
-    .nav{
-      display:flex;
-      justify-content:space-around;
-      background:white;
-      border-top:1px solid #eee;
-      padding:8px 0;
-      font-size:13px;
-      position: fixed;
-      left:0; right:0; bottom:0;
-    }
-    .nav a{
-      text-decoration:none;
-      color:#666;
-      display:flex; flex-direction:column; align-items:center;
-      gap:2px;
-      font-weight:bold;
-    }
-    .nav a.active{ color:#ff2e73; }
-
-    @media (max-width: 820px){
-      .events{ grid-template-columns: 1fr; }
-    }
-  </style>
+<style>
+  body{
+    font-family:Arial;background:#0f1115;color:white;
+    padding:16px;padding-bottom:80px;
+  }
+  h2{text-align:center;color:#ffd1e6;margin:8px 0 14px;}
+  .tabs{
+    max-width:1000px;margin:0 auto 12px;
+    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  }
+  .tab{
+    padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:bold;
+    background:rgba(255,255,255,0.08);opacity:.9;
+  }
+  .tab.active{
+    background:linear-gradient(135deg,#ff3d7f,#ff8ac9);
+    opacity:1;
+  }
+  .box{
+    max-width:1000px;margin:0 auto 12px;background:#151824;
+    padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);
+  }
+  .row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);
+    margin-bottom:8px;
+  }
+  .rank{
+    width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+    font-weight:900;background:rgba(255,255,255,0.12);
+  }
+  .avatar{
+    width:48px;height:48px;border-radius:12px;object-fit:cover;
+    background:#222;
+  }
+  .name{font-weight:900;font-size:16px;}
+  .sub{font-size:13px;opacity:.85;line-height:1.4;}
+  .vip{font-weight:900;margin-left:6px;}
+  .gold{color:#ffd700;}
+  .pink{color:#ff8ac9;}
+  .muted{opacity:.7;}
+</style>
 </head>
 <body>
 
-<header>
-  <a href="profile.html">← Hồ sơ</a>
-  <h1>NearLove • BXH & Sự kiện</h1>
-  <a href="index.html">Trang chủ</a>
-</header>
+<h2>🏆 Sự kiện & Bảng xếp hạng</h2>
 
-<div class="wrap">
-
-  <!-- BXH đại gia -->
-  <div class="card">
-    <div class="title">
-      <h2>👑 BXH Đại Gia (Xu)</h2>
-      <div class="sub">Top người nhiều xu nhất</div>
-    </div>
-
-    <div class="rank">
-      <div class="rank-item top">
-        <div class="num">1</div>
-        <img class="avatar" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=300&auto=format&fit=crop" />
-        <div class="info">
-          <div class="name">Hà • VIP Đế Vương</div>
-          <div class="tag">Cung điện 2000m² • Rồng mini 🐉</div>
-        </div>
-        <div class="score">98,000 xu</div>
-      </div>
-
-      <div class="rank-item top">
-        <div class="num">2</div>
-        <img class="avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop" />
-        <div class="info">
-          <div class="name">Linh • VIP Hoàng Gia</div>
-          <div class="tag">Lâu đài 1000m² • Cáo tuyết 🦊</div>
-        </div>
-        <div class="score">62,500 xu</div>
-      </div>
-
-      <div class="rank-item top">
-        <div class="num">3</div>
-        <img class="avatar" src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?q=80&w=300&auto=format&fit=crop" />
-        <div class="info">
-          <div class="name">Vy • VIP Thương Gia</div>
-          <div class="tag">Biệt thự 100m² • Shiba 🐕</div>
-        </div>
-        <div class="score">40,200 xu</div>
-      </div>
-
-      <div class="rank-item">
-        <div class="num">4</div>
-        <img class="avatar" src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=300&auto=format&fit=crop" />
-        <div class="info">
-          <div class="name">Trang • VIP Doanh Nhân</div>
-          <div class="tag">Căn hộ 2 tầng 🏠</div>
-        </div>
-        <div class="score">19,800 xu</div>
-      </div>
-
-      <div class="rank-item">
-        <div class="num">5</div>
-        <img class="avatar" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=300&auto=format&fit=crop" />
-        <div class="info">
-          <div class="name">Nam (Bạn) • VIP Nông Dân</div>
-          <div class="tag">Người mới • 1 thú cưng</div>
-        </div>
-        <div class="score">1,200 xu</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- BXH Hot profile -->
-  <div class="card">
-    <div class="title">
-      <h2>🔥 BXH Hot Profile</h2>
-      <div class="sub">Top được thích nhiều nhất</div>
-    </div>
-
-    <div class="rank">
-      <div class="rank-item top">
-        <div class="num">1</div>
-        <div class="info">
-          <div class="name">Linh • 5,320 lượt thích</div>
-          <div class="tag">Phong cách dễ thương • Online</div>
-        </div>
-      </div>
-      <div class="rank-item top">
-        <div class="num">2</div>
-        <div class="info">
-          <div class="name">Hà • 4,901 lượt thích</div>
-          <div class="tag">Cá tính • VIP cao</div>
-        </div>
-      </div>
-      <div class="rank-item top">
-        <div class="num">3</div>
-        <div class="info">
-          <div class="name">Vy • 4,210 lượt thích</div>
-          <div class="tag">Vui vẻ • Thích du lịch</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sự kiện -->
-  <div class="card">
-    <div class="title">
-      <h2>🎉 Sự kiện đang diễn ra</h2>
-      <div class="sub">Tham gia để nhận quà</div>
-    </div>
-
-    <div class="events">
-      <div class="event">
-        <b>Love Festival 💗</b>
-        <div class="time">21/11 – 30/11</div>
-        <div class="sub">Match + Chat nhận quà cưới, tăng xu.</div>
-        <button onclick="join('Love Festival', 'Bạn đã tham gia sự kiện Love Festival! 🎁')">Tham gia</button>
-      </div>
-
-      <div class="event">
-        <b>Đua thú cưng 🐾</b>
-        <div class="time">Mỗi tối 20:00</div>
-        <div class="sub">Đua Shiba – Mèo – Cáo tuyết. Top nhận +2000 xu.</div>
-        <button onclick="join('Đua thú cưng', 'Thú cưng của bạn đã vào đường đua! 🏁')">Tham gia</button>
-      </div>
-
-      <div class="event">
-        <b>Phòng chat bí mật 🎭</b>
-        <div class="time">Cuối tuần</div>
-        <div class="sub">Vào phòng chat ẩn để gặp người lạ thú vị.</div>
-        <button onclick="join('Phòng chat bí mật', 'Bạn đã mở phòng chat bí mật! 😎')">Mở ngay</button>
-      </div>
-
-      <div class="event">
-        <b>Vòng quay Đế Vương 👑</b>
-        <div class="time">VIP 4+ mới được chơi</div>
-        <div class="sub">Quay nhận vật phẩm hiếm, nhẫn cưới, thú cưng hiếm.</div>
-        <button onclick="join('Vòng quay Đế Vương', 'Bạn đã xem demo sự kiện VIP 👑')">Xem demo</button>
-      </div>
-    </div>
-  </div>
-
+<div class="tabs">
+  <div class="tab active" data-tab="rich">💰 Đại gia</div>
+  <div class="tab" data-tab="vip">👑 VIP</div>
+  <div class="tab" data-tab="couple">💍 Cặp đôi</div>
 </div>
 
-<!-- popup -->
-<div class="popup" id="popup">
-  <div class="box">
-    <h3 id="popTitle">Sự kiện</h3>
-    <p id="popText" style="opacity:.9; line-height:1.5;"></p>
-    <button onclick="closePop()">OK</button>
-    <button class="close" onclick="closePop()">Đóng</button>
-  </div>
+<div class="box" id="content">
+  Đang tải...
 </div>
 
-<!-- menu dưới -->
-<div class="nav">
-  <a href="index.html">🏠<span>Home</span></a>
-  <a href="match.html">💗<span>Match</span></a>
-  <a href="chat.html">💬<span>Chat</span></a>
-  <a href="vip.html">👑<span>VIP</span></a>
-  <a href="game.html">🎮<span>Game</span></a>
-  <a class="active" href="event.html">🏆<span>BXH</span></a>
-</div>
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
 
-<script>
-  function join(title, text){
-    document.getElementById("popTitle").innerText = title + " ✅";
-    document.getElementById("popText").innerText = text;
-    document.getElementById("popup").style.display = "flex";
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, limit, onSnapshot, where, getDocs, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const content = document.getElementById("content");
+  const tabs = document.querySelectorAll(".tab");
+
+  let currentTab = "rich";
+  let unsub = null;
+
+  tabs.forEach(t=>{
+    t.onclick=()=>{
+      tabs.forEach(x=>x.classList.remove("active"));
+      t.classList.add("active");
+      currentTab = t.dataset.tab;
+      loadTab();
+    };
+  });
+
+  onAuthStateChanged(auth, (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    loadTab();
+  });
+
+  function loadTab(){
+    if(unsub) unsub();
+
+    if(currentTab==="rich") loadRich();
+    if(currentTab==="vip") loadVip();
+    if(currentTab==="couple") loadCouple();
   }
-  function closePop(){
-    document.getElementById("popup").style.display = "none";
+
+  // ===== BXH ĐẠI GIA (coins) =====
+  function loadRich(){
+    const q = query(
+      collection(db, "users"),
+      orderBy("coins","desc"),
+      limit(20)
+    );
+
+    unsub = onSnapshot(q, (snap)=>{
+      const list=[];
+      snap.forEach(d=> list.push({uid:d.id, ...d.data()}));
+      renderUsers(list, (u)=>`💰 ${u.coins||0} xu`);
+    });
+  }
+
+  // ===== BXH VIP (vipTier) =====
+  function loadVip(){
+    const q = query(
+      collection(db, "users"),
+      orderBy("vipTier","desc"),
+      limit(20)
+    );
+
+    unsub = onSnapshot(q, (snap)=>{
+      const list=[];
+      snap.forEach(d=> list.push({uid:d.id, ...d.data()}));
+      renderUsers(list, (u)=> u.vipTier ? `👑 VIP ${u.vipTier} • ${u.vipName||""}` : "Thường");
+    });
+  }
+
+  // ===== BXH CẶP ĐÔI (weddings) =====
+  async function loadCouple(){
+    // cưới thì nằm trong users.marriedTo
+    const q = query(
+      collection(db, "users"),
+      where("marriedTo","!=", null),
+      limit(50)
+    );
+
+    unsub = onSnapshot(q, async (snap)=>{
+      const marriedUsers=[];
+      snap.forEach(d=> marriedUsers.push({uid:d.id, ...d.data()}));
+
+      // gom theo weddingId (tránh lặp 2 lần)
+      const map = new Map();
+      marriedUsers.forEach(u=>{
+        if(u.weddingId) map.set(u.weddingId, u);
+      });
+
+      const couples=[];
+      for(const [weddingId, u] of map.entries()){
+        const otherUid = u.marriedTo;
+        const otherSnap = await getDoc(doc(db,"users", otherUid));
+        const other = otherSnap.exists() ? otherSnap.data() : {};
+
+        couples.push({
+          weddingId,
+          a:{ uid:u.uid, ...u },
+          b:{ uid:otherUid, ...other }
+        });
+      }
+
+      renderCouples(couples.slice(0,20));
+    });
+  }
+
+  // ===== Render user list =====
+  function renderUsers(list, rightTextFn){
+    if(list.length===0){
+      content.innerHTML = `<div class="muted">Chưa có dữ liệu.</div>`;
+      return;
+    }
+
+    content.innerHTML = list.map((u, idx)=>{
+      const vipTier = u.vipTier||0;
+      const vipColor = getVipColor(vipTier);
+      return `
+        <div class="row">
+          <div class="rank">${idx+1}</div>
+          <img class="avatar" src="${u.avatar||'default.png'}" />
+          <div style="flex:1">
+            <div class="name" style="color:${vipColor}">
+              ${u.name||"Chưa đặt tên"}
+              ${vipTier?`<span class="vip">👑VIP${vipTier}</span>`:""}
+            </div>
+            <div class="sub">
+              ${u.gender?`• ${u.gender} `:""} ${u.age?`• ${u.age} tuổi`:""}
+              ${u.activePet?`<br>🐾 ${u.activePet.name} Lv.${u.activePet.level||1}`:""}
+              ${u.activeHouse?`<br>🏠 ${u.activeHouse.name} Lv.${u.activeHouse.level||1}`:""}
+            </div>
+          </div>
+          <div class="sub pink"><b>${rightTextFn(u)}</b></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // ===== Render couples =====
+  function renderCouples(couples){
+    if(couples.length===0){
+      content.innerHTML = `<div class="muted">Chưa có cặp đôi nào kết hôn.</div>`;
+      return;
+    }
+
+    content.innerHTML = couples.map((c, idx)=>{
+      const a=c.a, b=c.b;
+      return `
+        <div class="row">
+          <div class="rank">${idx+1}</div>
+
+          <img class="avatar" src="${a.avatar||'default.png'}" />
+          <div style="flex:1">
+            <div class="name">${a.name||"A"}</div>
+            <div class="sub muted">${a.uid}</div>
+          </div>
+
+          <div class="gold" style="font-size:20px;font-weight:900;">💞</div>
+
+          <img class="avatar" src="${b.avatar||'default.png'}" />
+          <div style="flex:1">
+            <div class="name">${b.name||"B"}</div>
+            <div class="sub muted">${b.uid}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function getVipColor(tier){
+    if(tier>=6) return "#ffd700";
+    if(tier==5) return "#ff8ac9";
+    if(tier==4) return "#b388ff";
+    if(tier==3) return "#7bdff2";
+    if(tier==2) return "#7ee081";
+    if(tier==1) return "#ffffff";
+    return "#fff";
   }
 </script>
 
