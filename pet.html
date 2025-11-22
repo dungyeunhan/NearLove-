@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>NearLove - Pet</title>
+
+<style>
+  body{
+    font-family:Arial;background:#0f1115;color:white;
+    padding:16px;padding-bottom:80px;
+  }
+  h2{text-align:center;color:#ffd1e6;margin:8px 0 14px;}
+  .box{
+    max-width:900px;margin:0 auto 12px;background:#151824;
+    padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);
+  }
+  .sub{font-size:14px;opacity:.85;line-height:1.5}
+  .pet-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px;
+  }
+  .pet-card{
+    background:rgba(255,255,255,0.06);
+    padding:12px;border-radius:14px;cursor:pointer;
+    border:1px solid transparent;display:flex;flex-direction:column;gap:6px;align-items:center;
+    min-height:140px;
+  }
+  .pet-card.active{
+    border:1px solid #ff8ac9;background:rgba(255,61,127,0.18);
+  }
+  .icon{font-size:40px;}
+  .name{font-weight:900;}
+  .btn{
+    width:100%;padding:12px;border:none;border-radius:12px;
+    background:linear-gradient(135deg,#ff3d7f,#ff8ac9);color:white;font-weight:bold;
+    font-size:16px;margin-top:10px;cursor:pointer;
+  }
+  .btn.light{background:rgba(255,255,255,0.1);}
+  .status{
+    margin-top:8px;background:rgba(0,0,0,0.35);padding:10px;border-radius:10px;
+    font-size:14px;
+  }
+  #msg{margin-top:8px;font-size:14px}
+  @media (max-width:900px){.pet-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.pet-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<h2>🐾 Thú cưng NearLove</h2>
+
+<!-- Pet đang nuôi -->
+<div class="box">
+  <div class="sub">Pet đang nuôi:</div>
+  <div class="status" id="activePetBox">Đang tải...</div>
+  <button class="btn light" onclick="feedPet()">🍖 Cho ăn (+EXP)</button>
+  <p id="feedMsg" style="margin-top:6px;"></p>
+</div>
+
+<!-- Danh sách pet trong kho -->
+<div class="box">
+  <div class="sub">Chọn pet từ kho đồ (mua ở Shop → Thú cưng):</div>
+  <div class="pet-grid" id="petGrid"></div>
+  <p id="msg"></p>
+</div>
+
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const petGrid = document.getElementById("petGrid");
+  const msgEl = document.getElementById("msg");
+  const activeBox = document.getElementById("activePetBox");
+  const feedMsg = document.getElementById("feedMsg");
+
+  let myUid=null;
+  let inventoryPets=[];
+  let activePet=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    myUid=user.uid;
+
+    // load kho pet
+    const invSnap = await getDoc(doc(db,"inventories",myUid));
+    const items = invSnap.exists() ? (invSnap.data().items || []) : [];
+    inventoryPets = items.filter(i=> (i.type||"").toLowerCase().includes("thú cưng") || (i.id||"").includes("pet"));
+
+    // load active pet từ profile
+    const meSnap = await getDoc(doc(db,"users",myUid));
+    const me = meSnap.exists()?meSnap.data():{};
+    activePet = me.activePet || null;
+
+    renderActivePet();
+    renderPetList();
+  });
+
+  function renderActivePet(){
+    if(!activePet){
+      activeBox.innerHTML="Chưa nuôi pet nào.";
+      return;
+    }
+    activeBox.innerHTML = `
+      <div style="font-size:26px">${activePet.icon || "🐾"}</div>
+      <b>${activePet.name}</b><br>
+      Level: <b>${activePet.level||1}</b> • EXP: ${activePet.exp||0}/100
+    `;
+  }
+
+  function renderPetList(){
+    petGrid.innerHTML="";
+
+    if(inventoryPets.length===0){
+      msgEl.innerHTML="Bạn chưa có pet. Vào Shop mua pet trước nhé 🐾";
+      return;
+    }
+    msgEl.innerText="";
+
+    inventoryPets.forEach(p=>{
+      const div=document.createElement("div");
+      div.className="pet-card";
+      div.innerHTML=`
+        <div class="icon">${p.icon||"🐾"}</div>
+        <div class="name">${p.name}</div>
+        <div class="sub">${p.price||0} xu</div>
+      `;
+
+      if(activePet && activePet.id===p.id){
+        div.classList.add("active");
+      }
+
+      div.onclick=()=>selectPet(p);
+      petGrid.appendChild(div);
+    });
+  }
+
+  async function selectPet(p){
+    activePet = {
+      id: p.id,
+      name: p.name,
+      icon: p.icon || "🐾",
+      level: activePet?.id===p.id ? (activePet.level||1) : 1,
+      exp: activePet?.id===p.id ? (activePet.exp||0) : 0,
+    };
+
+    await updateDoc(doc(db,"users",myUid),{
+      activePet: activePet,
+      petUpdatedAt: serverTimestamp()
+    });
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Bạn đang nuôi: ${p.name}`;
+    renderActivePet();
+    renderPetList();
+  }
+
+  // Cho pet ăn → +EXP
+  window.feedPet = async ()=>{
+    if(!activePet){
+      feedMsg.style.color="red";
+      feedMsg.innerText="Bạn chưa chọn pet để nuôi.";
+      return;
+    }
+
+    let exp = activePet.exp || 0;
+    let level = activePet.level || 1;
+
+    exp += 25; // mỗi lần cho ăn +25 exp
+
+    if(exp >= 100){
+      level += 1;
+      exp = exp - 100;
+    }
+
+    activePet.level = level;
+    activePet.exp = exp;
+
+    await updateDoc(doc(db,"users",myUid),{
+      activePet: activePet,
+      petUpdatedAt: serverTimestamp()
+    });
+
+    feedMsg.style.color="lightgreen";
+    feedMsg.innerText=`🍖 Pet được cho ăn! EXP +25`;
+    renderActivePet();
+  };
+</script>
+
+</body>
+</html>
