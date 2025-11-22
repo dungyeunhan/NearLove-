@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>NearLove - Nhà cửa</title>
+
+<style>
+  body{
+    font-family:Arial;background:#0f1115;color:white;
+    padding:16px;padding-bottom:80px;
+  }
+  h2{text-align:center;color:#ffd1e6;margin:8px 0 14px;}
+  .box{
+    max-width:900px;margin:0 auto 12px;background:#151824;
+    padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);
+  }
+  .sub{font-size:14px;opacity:.85;line-height:1.5}
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px;
+  }
+  .card{
+    background:rgba(255,255,255,0.06);
+    padding:12px;border-radius:14px;cursor:pointer;
+    border:1px solid transparent;display:flex;flex-direction:column;gap:6px;align-items:center;
+    min-height:140px;
+  }
+  .card.active{
+    border:1px solid #ff8ac9;background:rgba(255,61,127,0.18);
+  }
+  .icon{font-size:40px;}
+  .name{font-weight:900;}
+  .btn{
+    width:100%;padding:12px;border:none;border-radius:12px;
+    background:linear-gradient(135deg,#ff3d7f,#ff8ac9);color:white;font-weight:bold;
+    font-size:16px;margin-top:10px;cursor:pointer;
+  }
+  .btn.light{background:rgba(255,255,255,0.1);}
+  .status{
+    margin-top:8px;background:rgba(0,0,0,0.35);padding:10px;border-radius:10px;
+    font-size:14px;
+  }
+  #msg{margin-top:8px;font-size:14px}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<h2>🏠 Nhà cửa NearLove</h2>
+
+<!-- Nhà đang ở -->
+<div class="box">
+  <div class="sub">Nhà đang ở:</div>
+  <div class="status" id="activeHouseBox">Đang tải...</div>
+
+  <button class="btn light" onclick="upgradeHouse()">🧱 Nâng cấp nhà (tốn xu)</button>
+  <p id="upMsg" style="margin-top:6px;"></p>
+</div>
+
+<!-- Danh sách nhà trong kho -->
+<div class="box">
+  <div class="sub">Chọn nhà từ kho đồ (mua ở Shop → Nhà cửa):</div>
+  <div class="grid" id="houseGrid"></div>
+  <p id="msg"></p>
+</div>
+
+<!-- Firebase -->
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins, getCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const gridEl = document.getElementById("houseGrid");
+  const msgEl = document.getElementById("msg");
+  const activeBox = document.getElementById("activeHouseBox");
+  const upMsg = document.getElementById("upMsg");
+
+  let myUid=null;
+  let inventoryHouses=[];
+  let activeHouse=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    myUid=user.uid;
+
+    await ensureCoins();
+
+    // load kho nhà
+    const invSnap = await getDoc(doc(db,"inventories",myUid));
+    const items = invSnap.exists() ? (invSnap.data().items || []) : [];
+    inventoryHouses = items.filter(i=> (i.type||"").toLowerCase().includes("nhà cửa") || (i.id||"").includes("house"));
+
+    // load active house từ profile
+    const meSnap = await getDoc(doc(db,"users",myUid));
+    const me = meSnap.exists()?meSnap.data():{};
+    activeHouse = me.activeHouse || null;
+
+    renderActiveHouse();
+    renderHouseList();
+  });
+
+  function renderActiveHouse(){
+    if(!activeHouse){
+      activeBox.innerHTML="Chưa có nhà nào. Vào Shop mua nhà trước nhé 🏠";
+      return;
+    }
+    activeBox.innerHTML = `
+      <div style="font-size:26px">${activeHouse.icon || "🏠"}</div>
+      <b>${activeHouse.name}</b><br>
+      Level: <b>${activeHouse.level||1}</b>
+    `;
+  }
+
+  function renderHouseList(){
+    gridEl.innerHTML="";
+
+    if(inventoryHouses.length===0){
+      msgEl.innerHTML="Bạn chưa có nhà. Vào Shop mua nhà trước nhé 🏠";
+      return;
+    }
+    msgEl.innerText="";
+
+    inventoryHouses.forEach(h=>{
+      const div=document.createElement("div");
+      div.className="card";
+      div.innerHTML=`
+        <div class="icon">${h.icon||"🏠"}</div>
+        <div class="name">${h.name}</div>
+        <div class="sub">${h.price||0} xu</div>
+      `;
+
+      if(activeHouse && activeHouse.id===h.id){
+        div.classList.add("active");
+      }
+
+      div.onclick=()=>selectHouse(h);
+      gridEl.appendChild(div);
+    });
+  }
+
+  async function selectHouse(h){
+    activeHouse = {
+      id: h.id,
+      name: h.name,
+      icon: h.icon || "🏠",
+      level: activeHouse?.id===h.id ? (activeHouse.level||1) : 1
+    };
+
+    await updateDoc(doc(db,"users",myUid),{
+      activeHouse: activeHouse,
+      houseUpdatedAt: serverTimestamp()
+    });
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Bạn đang ở: ${h.name}`;
+    renderActiveHouse();
+    renderHouseList();
+  }
+
+  // Nâng cấp nhà (tốn xu)
+  window.upgradeHouse = async ()=>{
+    if(!activeHouse){
+      upMsg.style.color="red";
+      upMsg.innerText="Bạn chưa chọn nhà để ở.";
+      return;
+    }
+
+    const curLevel = activeHouse.level || 1;
+    const cost = curLevel * 300; // level càng cao càng tốn
+
+    const res = await spendCoins(cost);
+    if(!res.ok){
+      upMsg.style.color="red";
+      upMsg.innerText=`Không đủ xu để nâng cấp. Cần ${cost} xu.`;
+      return;
+    }
+
+    activeHouse.level = curLevel + 1;
+
+    await updateDoc(doc(db,"users",myUid),{
+      activeHouse: activeHouse,
+      houseUpdatedAt: serverTimestamp()
+    });
+
+    upMsg.style.color="lightgreen";
+    upMsg.innerText=`🧱 Nâng cấp thành công! Nhà lên Level ${activeHouse.level} (-${cost} xu)`;
+    renderActiveHouse();
+  };
+</script>
+
+</body>
+</html>
