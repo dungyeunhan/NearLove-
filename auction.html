@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Auction</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  @media(max-width:700px){.grid{grid-template-columns:1fr;}}
+  .timer{font-weight:900;color:#7ee081;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🔨 Đấu giá NearLove</h2>
+
+  <div class="box">
+    <div style="font-weight:900;margin-bottom:6px;">Tạo đấu giá (từ tủ đồ)</div>
+    <div id="myItems"></div>
+    <p id="emptyMy" class="muted" style="display:none;">Bạn chưa có item nào.</p>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Đấu giá đang diễn ra</div>
+    <div id="auctions" class="grid" style="margin-top:8px;"></div>
+    <p id="emptyAuc" class="muted" style="display:none;">Chưa có đấu giá nào.</p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="market.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { getWardrobe } from "./market.js";
+  import { ensureCoins, spendCoins, addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, addDoc, collection,
+    query, where, orderBy, onSnapshot, serverTimestamp, increment
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const myItemsEl=document.getElementById("myItems");
+  const emptyMy=document.getElementById("emptyMy");
+  const auctionsEl=document.getElementById("auctions");
+  const emptyAuc=document.getElementById("emptyAuc");
+
+  let uid=null, me=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.data()||{};
+
+    await renderMyItems();
+    listenAuctions();
+    setInterval(endExpiredAuctions, 5000);
+  });
+
+  async function renderMyItems(){
+    const w=await getWardrobe(uid);
+    myItemsEl.innerHTML="";
+    if(!w.items || w.items.length===0){ emptyMy.style.display="block"; return; }
+    emptyMy.style.display="none";
+
+    w.items.forEach(it=>{
+      const row=document.createElement("div");
+      row.className="row fade-in";
+      row.innerHTML=`
+        <div style="font-size:26px">${it.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:900">${it.name}</div>
+          <div class="muted">${it.type} • ${it.rarity||"common"}</div>
+        </div>
+        <button class="btn light" style="width:auto" onclick="startAuc('${it.itemId}')">Đấu giá</button>
+      `;
+      myItemsEl.appendChild(row);
+    });
+  }
+
+  window.startAuc = async (itemId)=>{
+    const w=await getWardrobe(uid);
+    const it=w.items.find(x=>x.itemId===itemId);
+    if(!it){alert("Item không tồn tại.");return;}
+
+    const startPrice=Number(prompt("Giá khởi điểm (xu):","100")||0);
+    const minutes=Number(prompt("Thời gian đấu (phút):","10")||10);
+    if(startPrice<=0||minutes<=0){alert("Không hợp lệ");return;}
+
+    // remove item khỏi wardrobe
+    w.items=w.items.filter(x=>x.itemId!==itemId);
+    await setDoc(doc(db,"wardrobe",uid),w,{merge:true});
+
+    const endAt = new Date(Date.now()+minutes*60*1000);
+    await addDoc(collection(db,"auctions"),{
+      sellerUid:uid,
+      sellerName:me.name||uid,
+      sellerAvatar:me.avatar||"default.png",
+      item:{ itemId:it.itemId,name:it.name,icon:it.icon,rarity:it.rarity||"common",type:it.type||"top" },
+      startPrice,
+      highestBid:startPrice,
+      highestBidderUid:null,
+      endAt,
+      status:"active",
+      createdAt:serverTimestamp()
+    });
+
+    alert("✅ Đã tạo đấu giá!");
+    renderMyItems();
+  };
+
+  function listenAuctions(){
+    const q=query(collection(db,"auctions"),
+      where("status","==","active"),
+      orderBy("endAt","asc")
+    );
+
+    onSnapshot(q,(snap)=>{
+      auctionsEl.innerHTML="";
+      if(snap.empty){ emptyAuc.style.display="block"; return; }
+      emptyAuc.style.display="none";
+
+      snap.forEach(d=>{
+        const a=d.data();
+        const isMine=a.sellerUid===uid;
+        const leftMs = a.endAt?.toDate? a.endAt.toDate().getTime()-Date.now() : 0;
+
+        const card=document.createElement("div");
+        card.className="card fade-in";
+        card.innerHTML=`
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="font-size:34px">${a.item.icon}</div>
+            <div style="flex:1">
+              <div style="font-weight:900">${a.item.name}</div>
+              <div class="muted">${a.item.type} • ${a.item.rarity}</div>
+              <div class="timer">⏳ ${fmtLeft(leftMs)}</div>
+              <div class="muted small">Seller: ${a.sellerName}</div>
+              <div style="font-weight:900;color:#ffd1e6;">
+                Bid cao nhất: ${a.highestBid} xu
+              </div>
+              <div class="small muted">Leader: ${a.highestBidderName||"Chưa có"}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            ${isMine
+              ? `<button class="btn light" onclick="cancelAuc('${d.id}')">Hủy</button>`
+              : `<button class="btn" onclick="bid('${d.id}',${a.highestBid})">Đặt giá</button>`
+            }
+          </div>
+        `;
+        auctionsEl.appendChild(card);
+      });
+    });
+  }
+
+  window.bid = async (aucId, currentBid)=>{
+    const amount=Number(prompt("Nhập giá bạn muốn đặt (> current):", String(currentBid+10))||0);
+    if(amount<=currentBid){alert("Giá phải lớn hơn hiện tại.");return;}
+
+    // tạm trừ xu người bid (MVP simple)
+    const pay=await spendCoins(amount);
+    if(!pay.ok){alert("Không đủ xu.");return;}
+
+    const aRef=doc(db,'auctions',aucId);
+    const aSnap=await getDoc(aRef);
+    if(!aSnap.exists()) return;
+    const a=aSnap.data();
+
+    if(a.status!=="active"){alert("Đấu giá đã kết thúc."); return;}
+    if(a.endAt.toDate().getTime()<=Date.now()){
+      alert("Hết giờ."); return;
+    }
+    if(amount<=a.highestBid){alert("Bạn bị outbid rồi."); return;}
+
+    // hoàn tiền leader cũ
+    if(a.highestBidderUid){
+      await updateDoc(doc(db,"users",a.highestBidderUid),{
+        coins: increment(a.highestBid)
+      });
+    }
+
+    // update bid
+    await updateDoc(aRef,{
+      highestBid:amount,
+      highestBidderUid:uid,
+      highestBidderName:me.name||uid,
+      highestBidderAvatar:me.avatar||"default.png"
+    });
+
+    await addDoc(collection(db,"auctions",aucId,"bids"),{
+      bidderUid:uid,
+      bidderName:me.name||uid,
+      bidderAvatar:me.avatar||"default.png",
+      amount,
+      time:serverTimestamp()
+    });
+
+    alert("✅ Đặt giá thành công!");
+  };
+
+  window.cancelAuc = async (aucId)=>{
+    if(!confirm("Hủy đấu giá?")) return;
+    const aRef=doc(db,"auctions",aucId);
+    const aSnap=await getDoc(aRef);
+    if(!aSnap.exists()) return;
+    const a=aSnap.data();
+    if(a.sellerUid!==uid) return;
+
+    // trả item về seller
+    const w=await getWardrobe(uid);
+    w.items.push(a.item);
+    await setDoc(doc(db,"wardrobe",uid),w,{merge:true});
+
+    // hoàn tiền leader
+    if(a.highestBidderUid){
+      await updateDoc(doc(db,"users",a.highestBidderUid),{
+        coins: increment(a.highestBid)
+      });
+    }
+
+    await updateDoc(aRef,{status:"cancelled", endedAt:serverTimestamp()});
+    alert("Đã hủy.");
+    renderMyItems();
+  };
+
+  async function endExpiredAuctions(){
+    // scan active auctions (MVP only top 30)
+    const q=query(collection(db,"auctions"),
+      where("status","==","active"),
+      orderBy("endAt","asc")
+    );
+    const snap=await getDocs(q);
+    snap.forEach(async d=>{
+      const a=d.data();
+      const end = a.endAt?.toDate ? a.endAt.toDate().getTime() : 0;
+      if(end && end<=Date.now()){
+        await finalizeAuction(d.id, a);
+      }
+    });
+  }
+
+  async function finalizeAuction(aucId, a){
+    const aRef=doc(db,"auctions",aucId);
+    if(a.status!=="active") return;
+
+    if(a.highestBidderUid){
+      // chuyển item cho winner
+      const w=await getWardrobe(a.highestBidderUid);
+      w.items.push(a.item);
+      await setDoc(doc(db,"wardrobe",a.highestBidderUid),w,{merge:true});
+
+      // cộng xu seller
+      await updateDoc(doc(db,"users",a.sellerUid),{
+        coins: increment(a.highestBid)
+      });
+
+      // log
+      await addDoc(collection(db,"tradeLogs"),{
+        type:"auction",
+        auctionId:aucId,
+        sellerUid:a.sellerUid,
+        buyerUid:a.highestBidderUid,
+        item:a.item,
+        price:a.highestBid,
+        time:serverTimestamp()
+      });
+
+      await updateDoc(aRef,{
+        status:"ended",
+        endedAt:serverTimestamp()
+      });
+    }else{
+      // không ai bid => trả item seller
+      const w=await getWardrobe(a.sellerUid);
+      w.items.push(a.item);
+      await setDoc(doc(db,"wardrobe",a.sellerUid),w,{merge:true});
+
+      await updateDoc(aRef,{
+        status:"ended",
+        endedAt:serverTimestamp()
+      });
+    }
+  }
+
+  function fmtLeft(ms){
+    if(ms<=0) return "Hết giờ";
+    const s=Math.ceil(ms/1000);
+    const m=Math.floor(s/60);
+    const r=s%60;
+    return `${m}m ${r}s`;
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("market");
+</script>
+
+</body>
+</html>
