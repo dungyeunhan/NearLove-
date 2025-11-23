@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Thành Tựu</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .achv{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .left{display:flex;align-items:center;gap:10px;}
+  .icon{font-size:28px;width:34px;text-align:center;}
+  .locked{opacity:.45;filter:grayscale(1);}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🏅 Thành tựu NearLove</h2>
+  <div id="list"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có dữ liệu.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="achievements.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ACHV_LIST, checkAchievements } from "./achievements.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const listEl=document.getElementById("list");
+  const emptyEl=document.getElementById("empty");
+
+  onAuthStateChanged(auth,(user)=>{
+    if(!user){location.href="login.html";return;}
+
+    // check ngay khi vào trang
+    checkAchievements();
+
+    onSnapshot(doc(db,"achievements",user.uid),(snap)=>{
+      const data=snap.exists()?snap.data():{unlocked:{},stats:{}};
+      render(data);
+    });
+  });
+
+  function render(data){
+    const unlocked=data.unlocked||{};
+    listEl.innerHTML="";
+
+    ACHV_LIST.forEach(a=>{
+      const isUnlocked=!!unlocked[a.id];
+      const row=document.createElement("div");
+      row.className=`row achv fade-in ${isUnlocked?"":"locked"}`;
+      row.innerHTML=`
+        <div class="left">
+          <div class="icon">${a.icon}</div>
+          <div>
+            <div style="font-weight:900">${a.name}</div>
+            <div class="muted">Thưởng: ${a.reward} xu</div>
+          </div>
+        </div>
+        <div class="tag">${isUnlocked?"Đã mở":"Chưa mở"}</div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    emptyEl.style.display = ACHV_LIST.length===0?"block":"none";
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("achv");
+</script>
+
+</body>
+</html>
