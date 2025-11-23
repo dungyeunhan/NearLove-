@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Gift Shop</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🎁 Gift Shop</h2>
+
+  <div class="box">
+    <div style="font-weight:900;">Quà bạn đang có</div>
+    <div id="inv"></div>
+    <p id="emptyInv" class="muted" style="display:none;">Chưa có quà nào.</p>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:6px;">Shop quà tặng</div>
+    <div id="shop" class="grid"></div>
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script type="module" src="gifts.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth } from "./firebase.js";
+  import { ensureCoins } from "./coins.js";
+  import { GIFT_CATALOG, buyGift, loadMyInventory } from "./gifts.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+  const invEl=document.getElementById("inv");
+  const emptyInv=document.getElementById("emptyInv");
+  const shopEl=document.getElementById("shop");
+  const msgEl=document.getElementById("msg");
+
+  let uid=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+    await renderInventory();
+    renderShop();
+  });
+
+  async function renderInventory(){
+    const inv=await loadMyInventory(uid);
+    invEl.innerHTML="";
+    const items=inv.items||[];
+    if(items.length===0){ emptyInv.style.display="block"; return; }
+    emptyInv.style.display="none";
+
+    items.forEach(g=>{
+      const row=document.createElement("div");
+      row.className="row fade-in";
+      row.innerHTML=`
+        <div style="font-size:26px">${g.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:900">${g.name}</div>
+          <div class="muted">Số lượng: <b>${g.qty}</b></div>
+        </div>
+      `;
+      invEl.appendChild(row);
+    });
+  }
+
+  function renderShop(){
+    shopEl.innerHTML="";
+    GIFT_CATALOG.forEach(g=>{
+      const card=document.createElement("div");
+      card.className="card fade-in";
+      card.innerHTML=`
+        <div style="font-size:34px;text-align:center">${g.icon}</div>
+        <div style="font-weight:900;text-align:center">${g.name}</div>
+        <div class="muted" style="text-align:center;">${g.price} xu</div>
+        ${g.vipOnly?`<div class="tag" style="text-align:center;">VIP ≥${g.vipOnly}</div>`:""}
+        <button class="btn" style="margin-top:6px" onclick="buy('${g.giftId}')">Mua</button>
+      `;
+      shopEl.appendChild(card);
+    });
+  }
+
+  window.buy = async (giftId)=>{
+    const qty=Number(prompt("Mua số lượng:", "1")||1);
+    if(qty<=0) return;
+    msgEl.innerText="Đang mua...";
+
+    const res=await buyGift(giftId, qty);
+    if(!res.ok){
+      msgEl.style.color="red";
+      msgEl.innerText = res.msg==="vip required"
+        ? "Quà này chỉ dành cho VIP."
+        : "Không đủ xu / lỗi mua.";
+      return;
+    }
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText="✅ Mua thành công!";
+    renderInventory();
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("market");
+</script>
+
+</body>
+</html>
