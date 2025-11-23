@@ -2,91 +2,289 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>NearLove - Admin Reports</title>
+<title>NearLove - Admin Panel</title>
 <link rel="stylesheet" href="theme.css">
+<style>
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .tab{padding:8px 12px;border-radius:999px;cursor:pointer;background:rgba(255,255,255,0.06);font-weight:900;font-size:13px;}
+  .tab.active{background:#ff5fa2;color:#111;}
+  .list{display:flex;flex-direction:column;gap:8px;}
+  .small{font-size:12px;opacity:.8;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+</style>
 </head>
 <body>
 
 <div class="container">
-  <h2>🛡️ Admin — Reports</h2>
-  <div id="list"></div>
-  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có report nào.</p>
+  <h2>🛡️ Admin Panel</h2>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="reports">🚨 Reports</div>
+    <div class="tab" data-tab="ban">⛔ Ban User</div>
+    <div class="tab" data-tab="vip">👑 Set VIP</div>
+    <div class="tab" data-tab="war">⚔️ Reset War</div>
+    <div class="tab" data-tab="logs">🧾 Logs</div>
+  </div>
+
+  <div id="content"></div>
+  <p id="msg" class="muted"></p>
 </div>
 
 <script type="module" src="firebase.js"></script>
+<script type="module" src="vip.js"></script>
+<script type="module" src="admin.js"></script>
 <script src="theme.js"></script>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
+  import { VIP_TIERS } from "./vip.js";
+  import {
+    ADMIN_UIDS, isAdmin,
+    banUser, unbanUser, adminSetVip,
+    reviewReport, resetWarWeek, logAdmin, searchUsersByName
+  } from "./admin.js";
+
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
   import {
-    collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc
+    collection, query, where, orderBy, limit, onSnapshot, getDoc, doc, getDocs
   } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-  const listEl=document.getElementById("list");
-  const emptyEl=document.getElementById("empty");
+  const tabsEl=document.getElementById("tabs");
+  const content=document.getElementById("content");
+  const msgEl=document.getElementById("msg");
 
-  // UID admin của bạn (thay bằng UID thật của bạn)
-  const ADMIN_UIDS = [
-    "PUT_YOUR_UID_HERE"
-  ];
+  let currentTab="reports";
+  let unsub=null;
+
+  tabsEl.onclick=(e)=>{
+    const t=e.target.closest(".tab");
+    if(!t) return;
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    currentTab=t.dataset.tab;
+    loadTab();
+  };
 
   onAuthStateChanged(auth, async (user)=>{
-    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
-
-    if(!ADMIN_UIDS.includes(user.uid)){
-      alert("Bạn không có quyền admin.");
-      location.href="index.html";
-      return;
+    if(!user){location.href="login.html";return;}
+    if(!isAdmin(user.uid)){
+      alert("Bạn không có quyền admin."); location.href="index.html"; return;
     }
+    loadTab();
+  });
 
-    const q=query(collection(db,"reports"), orderBy("createdAt","desc"));
+  function loadTab(){
+    if(unsub) unsub();
 
-    onSnapshot(q,(snap)=>{
+    if(currentTab==="reports") return loadReports();
+    if(currentTab==="ban") return renderBanTab();
+    if(currentTab==="vip") return renderVipTab();
+    if(currentTab==="war") return renderWarTab();
+    if(currentTab==="logs") return loadLogs();
+  }
+
+  // ===== REPORTS TAB =====
+  function loadReports(){
+    content.innerHTML = `
+      <div class="box">
+        <div style="font-weight:900">Reports đang chờ duyệt</div>
+        <div id="reportList" class="list" style="margin-top:8px;"></div>
+        <p id="emptyReport" class="muted" style="display:none;">Không có report pending.</p>
+      </div>
+    `;
+    const listEl=document.getElementById("reportList");
+    const emptyEl=document.getElementById("emptyReport");
+
+    const q=query(
+      collection(db,"reports"),
+      where("status","==","pending"),
+      orderBy("createdAt","desc"),
+      limit(50)
+    );
+
+    unsub=onSnapshot(q,(snap)=>{
       listEl.innerHTML="";
       if(snap.empty){ emptyEl.style.display="block"; return; }
       emptyEl.style.display="none";
 
       snap.forEach(d=>{
         const r=d.data();
-        const id=d.id;
-
-        const row=document.createElement("div");
-        row.className="box fade-in";
-        row.style.marginBottom="8px";
-
-        const timeStr=r.createdAt?.toDate
-          ? r.createdAt.toDate().toLocaleString()
-          : "";
-
-        row.innerHTML=`
-          <div style="font-weight:900;font-size:16px;">
-            📌 Report: ${r.reason}
-          </div>
-          <div class="muted" style="margin-top:4px;">
-            Reporter: ${r.reporterUid}<br>
-            Target: ${r.targetUid}<br>
-            Ghi chú: ${r.note||"(không có)"}<br>
-            Thời gian: ${timeStr}<br>
-            Trạng thái: <b>${r.status||"new"}</b>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="btn light" data-act="review">Đang xử lý</button>
-            <button class="btn" data-act="done">Xong</button>
+        const time=r.createdAt?.toDate?r.createdAt.toDate().toLocaleString():"";
+        const card=document.createElement("div");
+        card.className="card fade-in";
+        card.innerHTML=`
+          <div><b>${r.reporterName||r.reporterUid}</b> báo cáo <b>${r.targetName||r.targetUid}</b></div>
+          <div class="small">Lý do: ${escapeHtml(r.reason||"")}</div>
+          ${r.evidence?`<div class="small">Bằng chứng: ${escapeHtml(r.evidence)}</div>`:""}
+          <div class="small muted">${time}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+            <button class="btn" onclick="approveReport('${d.id}','${r.targetUid}')">✅ Duyệt & Ban</button>
+            <button class="btn light" onclick="rejectReport('${d.id}')">❌ Từ chối</button>
+            <button class="btn light" onclick="viewUser('${r.targetUid}')">👤 Xem user</button>
           </div>
         `;
-
-        row.querySelectorAll("button").forEach(btn=>{
-          btn.onclick=()=>updateStatus(id, btn.dataset.act);
-        });
-
-        listEl.appendChild(row);
+        listEl.appendChild(card);
       });
     });
-  });
+  }
 
-  async function updateStatus(id, st){
-    await updateDoc(doc(db,"reports",id),{status:st});
+  window.approveReport = async (reportId, targetUid)=>{
+    const note = prompt("Ghi chú admin (tuỳ chọn):")||"";
+    const reason = prompt("Lý do ban user:")||"Vi phạm";
+    await reviewReport(reportId,"reviewed",note);
+    await banUser(targetUid, reason);
+    alert("Đã duyệt report và ban user.");
+  };
+
+  window.rejectReport = async (reportId)=>{
+    const note = prompt("Ghi chú admin:")||"";
+    await reviewReport(reportId,"rejected",note);
+    alert("Đã từ chối report.");
+  };
+
+  window.viewUser = (uid)=>{
+    location.href=`profile_public.html?u=${uid}`;
+  };
+
+  // ===== BAN TAB =====
+  function renderBanTab(){
+    content.innerHTML=`
+      <div class="box">
+        <div style="font-weight:900;margin-bottom:6px;">Tìm user</div>
+        <input id="searchKey" placeholder="Nhập tên user...">
+        <button class="btn" style="margin-top:6px" onclick="searchUser()">🔎 Tìm</button>
+        <div id="searchList" class="list" style="margin-top:8px;"></div>
+      </div>
+    `;
+  }
+
+  window.searchUser = async ()=>{
+    const key=document.getElementById("searchKey").value.trim();
+    const listEl=document.getElementById("searchList");
+    listEl.innerHTML="Đang tìm...";
+
+    const list = await searchUsersByName(key||"");
+    if(list.length===0){
+      listEl.innerHTML=`<div class="muted">Không tìm thấy.</div>`;
+      return;
+    }
+
+    listEl.innerHTML="";
+    list.forEach(u=>{
+      const card=document.createElement("div");
+      card.className="row fade-in";
+      card.innerHTML=`
+        <img class="avatar" src="${u.avatar||'default.png'}" style="width:40px;height:40px;">
+        <div style="flex:1">
+          <div style="font-weight:900">${u.name||u.uid}</div>
+          <div class="small muted">${u.uid}</div>
+          <div class="small">Ban: <b>${u.isBanned?"YES":"NO"}</b></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn ${u.isBanned?'light':''}" onclick="doBan('${u.uid}')">${u.isBanned?'Ban lại':'Ban'}</button>
+          <button class="btn light" onclick="doUnban('${u.uid}')">Unban</button>
+        </div>
+      `;
+      listEl.appendChild(card);
+    });
+  };
+
+  window.doBan = async (uid)=>{
+    const r=prompt("Lý do ban:")||"Vi phạm";
+    await banUser(uid,r);
+    alert("Đã ban user.");
+    searchUser();
+  };
+
+  window.doUnban = async (uid)=>{
+    await unbanUser(uid);
+    alert("Đã unban user.");
+    searchUser();
+  };
+
+  // ===== VIP TAB =====
+  function renderVipTab(){
+    const tierOptions = Object.entries(VIP_TIERS).map(([k,t])=>{
+      if(k==="0") return "";
+      return `<option value="${k}">${k} - ${t.name}</option>`;
+    }).join("");
+
+    content.innerHTML=`
+      <div class="box">
+        <div style="font-weight:900;margin-bottom:6px;">Set VIP cho user</div>
+        <input id="vipUid" placeholder="Nhập UID user">
+        <div class="grid2" style="margin-top:6px;">
+          <select id="vipTier">${tierOptions}</select>
+          <input id="vipDays" type="number" value="30" placeholder="Số ngày">
+        </div>
+        <button class="btn" style="margin-top:8px" onclick="setVipAdmin()">👑 Set VIP</button>
+        <p class="muted small">* Set VIP là ghi đè tier và hạn mới.</p>
+      </div>
+    `;
+  }
+
+  window.setVipAdmin = async ()=>{
+    const uid=document.getElementById("vipUid").value.trim();
+    const tier=Number(document.getElementById("vipTier").value);
+    const days=Number(document.getElementById("vipDays").value||30);
+
+    if(!uid){alert("Thiếu UID");return;}
+    await adminSetVip(uid,tier,days);
+    alert(`Đã set VIP tier ${tier} cho ${uid} (${days} ngày).`);
+  };
+
+  // ===== WAR TAB =====
+  function renderWarTab(){
+    content.innerHTML=`
+      <div class="box">
+        <div style="font-weight:900">Reset War tuần</div>
+        <div class="muted small">Sau khi bạn phát thưởng top5, bấm nút này để reset warPoints về 0.</div>
+        <button class="btn red" style="margin-top:8px" onclick="resetWar()">⚔️ Reset War</button>
+      </div>
+    `;
+  }
+
+  window.resetWar = async ()=>{
+    if(!confirm("Reset tất cả warPoints?")) return;
+    await resetWarWeek();
+    alert("Đã reset war tuần.");
+  };
+
+  // ===== LOGS TAB =====
+  function loadLogs(){
+    content.innerHTML=`
+      <div class="box">
+        <div style="font-weight:900">Admin Logs</div>
+        <div id="logList" class="list" style="margin-top:8px;"></div>
+      </div>
+    `;
+    const logList=document.getElementById("logList");
+
+    const q=query(collection(db,"adminLogs"), orderBy("time","desc"), limit(50));
+    unsub=onSnapshot(q,(snap)=>{
+      logList.innerHTML="";
+      snap.forEach(d=>{
+        const l=d.data();
+        const time=l.time?.toDate?l.time.toDate().toLocaleString():"";
+        const row=document.createElement("div");
+        row.className="row fade-in";
+        row.innerHTML=`
+          <div style="flex:1">
+            <div><b>${l.adminName||l.adminUid}</b> → <b>${l.action}</b></div>
+            <div class="small muted">Target: ${l.targetUid||"-"}</div>
+            <div class="small muted">${time}</div>
+          </div>
+          <div class="tag">log</div>
+        `;
+        logList.appendChild(row);
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[m]));
   }
 </script>
 
