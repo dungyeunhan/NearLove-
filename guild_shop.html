@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Shop Bang</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .item-card{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;}
+  .i{font-size:34px}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🛒 Shop Bang</h2>
+
+  <div class="box" id="guildInfo">Đang tải...</div>
+
+  <div id="items" class="grid-3" style="margin-top:10px;"></div>
+  <p id="msg" class="muted" style="margin-top:8px;"></p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, updateDoc, addDoc, collection,
+    increment, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const guildInfoEl=document.getElementById("guildInfo");
+  const itemsEl=document.getElementById("items");
+  const msgEl=document.getElementById("msg");
+
+  let uid=null, me=null, guildId=null, guild=null;
+
+  // MVP danh sách item shop bang
+  const GUILD_ITEMS = [
+    { id:"banner_lv1", name:"Banner Bang", icon:"🏳️", cost:300, desc:"Trang trí bang (demo)" },
+    { id:"buff_match", name:"Buff Match 1h", icon:"💗", cost:500, desc:"+5 điểm AI match cho cả bang (demo)" },
+    { id:"gift_box", name:"Hộp quà bang", icon:"🎁", cost:800, desc:"Quà tặng thành viên (demo)" }
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.exists()?meSnap.data():{};
+    guildId=me.guildId;
+
+    if(!guildId){
+      alert("Bạn chưa vào bang nào.");
+      location.href="guild.html";
+      return;
+    }
+
+    const gSnap=await getDoc(doc(db,"guilds",guildId));
+    guild=gSnap.exists()?gSnap.data():{};
+    renderGuildInfo();
+    renderItems();
+  });
+
+  function renderGuildInfo(){
+    guildInfoEl.innerHTML=`
+      <div style="font-weight:900;font-size:18px;">
+        ${guild.badge||"🏰"} ${guild.name||"Bang hội"}
+      </div>
+      <div class="muted">Quỹ bang: <b>${guild.coinsPool||0}</b> xu</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <a class="btn light" href="guild_manage.html">🛠️ Quản trị / Donate</a>
+        <a class="btn light" href="guild.html">← Về Bang</a>
+      </div>
+    `;
+  }
+
+  function renderItems(){
+    itemsEl.innerHTML="";
+    GUILD_ITEMS.forEach(it=>{
+      const card=document.createElement("div");
+      card.className="card item-card fade-in";
+      card.innerHTML=`
+        <div class="i">${it.icon}</div>
+        <div style="font-weight:900">${it.name}</div>
+        <div class="muted">${it.desc}</div>
+        <div class="tag">Giá: ${it.cost} quỹ</div>
+        <button class="btn" onclick="buyItem('${it.id}')">Mua bằng quỹ</button>
+      `;
+      itemsEl.appendChild(card);
+    });
+  }
+
+  window.buyItem = async (itemId)=>{
+    const it = GUILD_ITEMS.find(x=>x.id===itemId);
+    if(!it) return;
+
+    const pool = guild.coinsPool||0;
+    if(pool < it.cost){
+      msgEl.style.color="red";
+      msgEl.innerText="Quỹ bang không đủ.";
+      return;
+    }
+
+    // trừ quỹ
+    await updateDoc(doc(db,"guilds",guildId),{
+      coinsPool: increment(-it.cost),
+      updatedAt: serverTimestamp()
+    });
+
+    // lưu log mua
+    await addDoc(collection(db,"guildPurchases",guildId,"items"),{
+      itemId: it.id,
+      itemName: it.name,
+      itemIcon: it.icon,
+      buyerUid: uid,
+      buyerName: me.name||uid,
+      cost: it.cost,
+      time: serverTimestamp()
+    });
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Bang đã mua: ${it.name} (-${it.cost} quỹ)`;
+
+    // reload pool
+    const gSnap=await getDoc(doc(db,"guilds",guildId));
+    guild=gSnap.data();
+    renderGuildInfo();
+  };
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("guild");
+</script>
+
+</body>
+</html>
