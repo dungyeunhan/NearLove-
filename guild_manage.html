@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Quản trị Bang</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .member-row{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+  .left{display:flex;align-items:center;gap:8px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🛠️ Quản trị Bang</h2>
+
+  <div class="box" id="guildInfo">Đang tải...</div>
+
+  <!-- Donate -->
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Donate vào quỹ bang</div>
+    <input id="donateAmt" type="number" placeholder="Nhập số xu donate">
+    <button class="btn" onclick="donate()">💰 Donate</button>
+    <div class="muted">* Xu donate sẽ chuyển từ bạn sang quỹ bang.</div>
+  </div>
+
+  <!-- Quản trị trưởng bang -->
+  <div class="box" id="ownerBox" style="margin-top:10px;display:none;">
+    <div style="font-weight:900;margin-bottom:8px;">Chỉ trưởng bang mới thấy phần này</div>
+    <div id="memberList"></div>
+
+    <button class="btn red" style="margin-top:10px;" onclick="disbandGuild()">
+      🧨 Giải tán bang
+    </button>
+  </div>
+
+  <p id="msg" class="muted" style="margin-top:8px;"></p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, updateDoc, deleteDoc,
+    collection, getDocs,
+    increment, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const guildInfoEl = document.getElementById("guildInfo");
+  const ownerBox = document.getElementById("ownerBox");
+  const memberListEl = document.getElementById("memberList");
+  const msgEl = document.getElementById("msg");
+
+  let uid=null, me=null, guildId=null, guild=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+    await ensureCoins();
+
+    const meSnap = await getDoc(doc(db,"users",uid));
+    me = meSnap.exists()?meSnap.data():{};
+    guildId = me.guildId;
+
+    if(!guildId){
+      alert("Bạn chưa vào bang nào.");
+      location.href="guild.html";
+      return;
+    }
+
+    const gSnap = await getDoc(doc(db,"guilds",guildId));
+    guild = gSnap.exists()?gSnap.data():{};
+    renderGuildInfo();
+
+    if(guild.ownerUid===uid){
+      ownerBox.style.display="block";
+      renderMembers();
+    }
+  });
+
+  function renderGuildInfo(){
+    guildInfoEl.innerHTML = `
+      <div style="font-weight:900;font-size:18px;">
+        ${guild.badge||"🏰"} ${guild.name||"Bang hội"}
+      </div>
+      <div class="muted">
+        Trưởng bang: ${guild.ownerUid}<br>
+        Thành viên: ${(guild.members||[]).length}<br>
+        Quỹ bang: <b>${guild.coinsPool||0}</b> xu
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <a class="btn light" href="guild.html">← Về Bang</a>
+        <a class="btn light" href="guild_shop.html">🛒 Shop Bang</a>
+        <a class="btn light" href="guild_mission.html">📜 Nhiệm vụ</a>
+      </div>
+    `;
+  }
+
+  async function renderMembers(){
+    memberListEl.innerHTML="Đang tải danh sách...";
+    const members = guild.members||[];
+
+    let html="";
+    for(const mUid of members){
+      const uSnap = await getDoc(doc(db,"users",mUid));
+      const u = uSnap.exists()?uSnap.data():{};
+      const isOwner = mUid===guild.ownerUid;
+
+      html += `
+        <div class="row member-row fade-in">
+          <div class="left">
+            <img class="avatar" src="${u.avatar||'default.png'}" style="width:42px;height:42px;">
+            <div>
+              <div style="font-weight:900">${u.name||mUid} ${isOwner?"👑":""}</div>
+              <div class="muted" style="font-size:12px;">${mUid}</div>
+            </div>
+          </div>
+          ${
+            isOwner ? `<div class="tag">Trưởng bang</div>`
+            : `<button class="btn light" style="width:auto;" onclick="transferOwner('${mUid}')">Chuyển trưởng</button>`
+          }
+        </div>
+      `;
+    }
+
+    memberListEl.innerHTML = html;
+  }
+
+  // ===== DONATE =====
+  window.donate = async ()=>{
+    const amt = Number(document.getElementById("donateAmt").value||0);
+    if(amt<=0){ msgEl.style.color="red"; msgEl.innerText="Số xu donate không hợp lệ."; return; }
+
+    const res = await spendCoins(amt);
+    if(!res.ok){ msgEl.style.color="red"; msgEl.innerText="Không đủ xu để donate."; return; }
+
+    await updateDoc(doc(db,"guilds",guildId),{
+      coinsPool: increment(amt),
+      updatedAt: serverTimestamp()
+    });
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Donate thành công +${amt} xu vào quỹ bang!`;
+    document.getElementById("donateAmt").value="";
+
+    // reload quỹ
+    const gSnap = await getDoc(doc(db,"guilds",guildId));
+    guild = gSnap.data();
+    renderGuildInfo();
+  };
+
+  // ===== CHUYỂN TRƯỞNG =====
+  window.transferOwner = async (newOwnerUid)=>{
+    if(!confirm("Chuyển trưởng bang cho người này?")) return;
+
+    await updateDoc(doc(db,"guilds",guildId),{
+      ownerUid: newOwnerUid,
+      updatedAt: serverTimestamp()
+    });
+
+    alert("✅ Đã chuyển trưởng bang!");
+    location.reload();
+  };
+
+  // ===== GIẢI TÁN BANG =====
+  window.disbandGuild = async ()=>{
+    if(!confirm("Giải tán bang sẽ xoá bang và gỡ tất cả thành viên. Chắc chưa?")) return;
+
+    const members = guild.members||[];
+
+    // gỡ guild khỏi từng user
+    for(const mUid of members){
+      await updateDoc(doc(db,"users",mUid),{
+        guildId: null, guildName: null, guildBadge: null
+      }).catch(()=>{});
+    }
+
+    // xoá bang
+    await deleteDoc(doc(db,"guilds",guildId));
+
+    alert("🧨 Bang đã bị giải tán.");
+    location.href="guild.html";
+  };
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("guild");
+</script>
+
+</body>
+</html>
