@@ -1,241 +1,82 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<title>NearLove - Sự kiện & BXH</title>
-
+<meta charset="UTF-8">
+<title>NearLove - Events</title>
+<link rel="stylesheet" href="theme.css">
 <style>
-  body{
-    font-family:Arial;background:#0f1115;color:white;
-    padding:16px;padding-bottom:80px;
-  }
-  h2{text-align:center;color:#ffd1e6;margin:8px 0 14px;}
-  .tabs{
-    max-width:1000px;margin:0 auto 12px;
-    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
-  }
-  .tab{
-    padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:bold;
-    background:rgba(255,255,255,0.08);opacity:.9;
-  }
-  .tab.active{
-    background:linear-gradient(135deg,#ff3d7f,#ff8ac9);
-    opacity:1;
-  }
-  .box{
-    max-width:1000px;margin:0 auto 12px;background:#151824;
-    padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);
-  }
-  .row{
-    display:flex;align-items:center;gap:10px;
-    padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);
-    margin-bottom:8px;
-  }
-  .rank{
-    width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
-    font-weight:900;background:rgba(255,255,255,0.12);
-  }
-  .avatar{
-    width:48px;height:48px;border-radius:12px;object-fit:cover;
-    background:#222;
-  }
-  .name{font-weight:900;font-size:16px;}
-  .sub{font-size:13px;opacity:.85;line-height:1.4;}
-  .vip{font-weight:900;margin-left:6px;}
-  .gold{color:#ffd700;}
-  .pink{color:#ff8ac9;}
-  .muted{opacity:.7;}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  @media(max-width:700px){.grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
-<h2>🏆 Sự kiện & Bảng xếp hạng</h2>
-
-<div class="tabs">
-  <div class="tab active" data-tab="rich">💰 Đại gia</div>
-  <div class="tab" data-tab="vip">👑 VIP</div>
-  <div class="tab" data-tab="couple">💍 Cặp đôi</div>
+<div class="container">
+  <h2>🎉 Sự kiện NearLove</h2>
+  <div id="list" class="grid"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có sự kiện.</p>
 </div>
 
-<div class="box" id="content">
-  Đang tải...
-</div>
-
-<!-- Firebase -->
 <script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-  import {
-    collection, query, orderBy, limit, onSnapshot, where, getDocs, doc, getDoc
-  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+  import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-  const content = document.getElementById("content");
-  const tabs = document.querySelectorAll(".tab");
+  const listEl=document.getElementById("list");
+  const emptyEl=document.getElementById("empty");
 
-  let currentTab = "rich";
-  let unsub = null;
+  onAuthStateChanged(auth,(user)=>{
+    if(!user){location.href="login.html";return;}
 
-  tabs.forEach(t=>{
-    t.onclick=()=>{
-      tabs.forEach(x=>x.classList.remove("active"));
-      t.classList.add("active");
-      currentTab = t.dataset.tab;
-      loadTab();
-    };
-  });
+    const q=query(collection(db,"events"), orderBy("startAt","desc"));
+    onSnapshot(q,(snap)=>{
+      listEl.innerHTML="";
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
 
-  onAuthStateChanged(auth, (user)=>{
-    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
-    loadTab();
-  });
+      snap.forEach(d=>{
+        const e=d.data();
+        const now=Date.now();
+        const start=e.startAt?.toDate?e.startAt.toDate().getTime():0;
+        const end=e.endAt?.toDate?e.endAt.toDate().getTime():0;
 
-  function loadTab(){
-    if(unsub) unsub();
+        const status = now<start ? "Sắp diễn ra" : (now>end ? "Đã kết thúc" : "Đang diễn ra");
+        const canJoin = now>=start && now<=end && e.isActive;
 
-    if(currentTab==="rich") loadRich();
-    if(currentTab==="vip") loadVip();
-    if(currentTab==="couple") loadCouple();
-  }
-
-  // ===== BXH ĐẠI GIA (coins) =====
-  function loadRich(){
-    const q = query(
-      collection(db, "users"),
-      orderBy("coins","desc"),
-      limit(20)
-    );
-
-    unsub = onSnapshot(q, (snap)=>{
-      const list=[];
-      snap.forEach(d=> list.push({uid:d.id, ...d.data()}));
-      renderUsers(list, (u)=>`💰 ${u.coins||0} xu`);
-    });
-  }
-
-  // ===== BXH VIP (vipTier) =====
-  function loadVip(){
-    const q = query(
-      collection(db, "users"),
-      orderBy("vipTier","desc"),
-      limit(20)
-    );
-
-    unsub = onSnapshot(q, (snap)=>{
-      const list=[];
-      snap.forEach(d=> list.push({uid:d.id, ...d.data()}));
-      renderUsers(list, (u)=> u.vipTier ? `👑 VIP ${u.vipTier} • ${u.vipName||""}` : "Thường");
-    });
-  }
-
-  // ===== BXH CẶP ĐÔI (weddings) =====
-  async function loadCouple(){
-    // cưới thì nằm trong users.marriedTo
-    const q = query(
-      collection(db, "users"),
-      where("marriedTo","!=", null),
-      limit(50)
-    );
-
-    unsub = onSnapshot(q, async (snap)=>{
-      const marriedUsers=[];
-      snap.forEach(d=> marriedUsers.push({uid:d.id, ...d.data()}));
-
-      // gom theo weddingId (tránh lặp 2 lần)
-      const map = new Map();
-      marriedUsers.forEach(u=>{
-        if(u.weddingId) map.set(u.weddingId, u);
+        const card=document.createElement("div");
+        card.className="card fade-in";
+        card.innerHTML=`
+          <div style="font-size:34px">${e.icon||"🎉"}</div>
+          <div style="font-weight:900;font-size:16px">${e.name}</div>
+          <div class="muted">${e.desc||""}</div>
+          <div class="tag">${status}</div>
+          <div class="muted small">
+            ${start?new Date(start).toLocaleString():""} → ${end?new Date(end).toLocaleString():""}
+          </div>
+          <button class="btn ${canJoin?'':'light'}" style="margin-top:6px"
+            ${canJoin?'':'disabled'}
+            onclick="join('${d.id}')">
+            Vào phòng event
+          </button>
+        `;
+        listEl.appendChild(card);
       });
-
-      const couples=[];
-      for(const [weddingId, u] of map.entries()){
-        const otherUid = u.marriedTo;
-        const otherSnap = await getDoc(doc(db,"users", otherUid));
-        const other = otherSnap.exists() ? otherSnap.data() : {};
-
-        couples.push({
-          weddingId,
-          a:{ uid:u.uid, ...u },
-          b:{ uid:otherUid, ...other }
-        });
-      }
-
-      renderCouples(couples.slice(0,20));
     });
-  }
+  });
 
-  // ===== Render user list =====
-  function renderUsers(list, rightTextFn){
-    if(list.length===0){
-      content.innerHTML = `<div class="muted">Chưa có dữ liệu.</div>`;
-      return;
-    }
+  window.join=(id)=>{
+    location.href=`event_room.html?e=${id}`;
+  };
+</script>
 
-    content.innerHTML = list.map((u, idx)=>{
-      const vipTier = u.vipTier||0;
-      const vipColor = getVipColor(vipTier);
-      return `
-        <div class="row">
-          <div class="rank">${idx+1}</div>
-          <img class="avatar" src="${u.avatar||'default.png'}" />
-          <div style="flex:1">
-            <div class="name" style="color:${vipColor}">
-              ${u.name||"Chưa đặt tên"}
-              ${vipTier?`<span class="vip">👑VIP${vipTier}</span>`:""}
-            </div>
-            <div class="sub">
-              ${u.gender?`• ${u.gender} `:""} ${u.age?`• ${u.age} tuổi`:""}
-              ${u.activePet?`<br>🐾 ${u.activePet.name} Lv.${u.activePet.level||1}`:""}
-              ${u.activeHouse?`<br>🏠 ${u.activeHouse.name} Lv.${u.activeHouse.level||1}`:""}
-            </div>
-          </div>
-          <div class="sub pink"><b>${rightTextFn(u)}</b></div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  // ===== Render couples =====
-  function renderCouples(couples){
-    if(couples.length===0){
-      content.innerHTML = `<div class="muted">Chưa có cặp đôi nào kết hôn.</div>`;
-      return;
-    }
-
-    content.innerHTML = couples.map((c, idx)=>{
-      const a=c.a, b=c.b;
-      return `
-        <div class="row">
-          <div class="rank">${idx+1}</div>
-
-          <img class="avatar" src="${a.avatar||'default.png'}" />
-          <div style="flex:1">
-            <div class="name">${a.name||"A"}</div>
-            <div class="sub muted">${a.uid}</div>
-          </div>
-
-          <div class="gold" style="font-size:20px;font-weight:900;">💞</div>
-
-          <img class="avatar" src="${b.avatar||'default.png'}" />
-          <div style="flex:1">
-            <div class="name">${b.name||"B"}</div>
-            <div class="sub muted">${b.uid}</div>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  function getVipColor(tier){
-    if(tier>=6) return "#ffd700";
-    if(tier==5) return "#ff8ac9";
-    if(tier==4) return "#b388ff";
-    if(tier==3) return "#7bdff2";
-    if(tier==2) return "#7ee081";
-    if(tier==1) return "#ffffff";
-    return "#fff";
-  }
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("events");
 </script>
 
 </body>
