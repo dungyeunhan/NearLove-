@@ -5,42 +5,38 @@
 <title>NearLove - Thông báo</title>
 <link rel="stylesheet" href="theme.css">
 <style>
-  .noti{cursor:pointer;}
-  .noti.unread{border:1px solid rgba(255,138,201,0.6);}
-  .dot{
-    width:8px;height:8px;border-radius:50%;background:#ff3d7f;display:inline-block;margin-right:6px;
-  }
+  .noti{display:flex;gap:10px;align-items:flex-start;}
+  .noti.unread{background:rgba(255,95,162,0.08);border:1px solid rgba(255,95,162,0.35);}
+  .noti .icon{font-size:22px;width:26px;text-align:center;}
 </style>
 </head>
 <body>
 
 <div class="container">
   <h2>🔔 Thông báo</h2>
-  <div id="notiList"></div>
-  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có thông báo nào.</p>
+  <div id="list"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có thông báo.</p>
 </div>
 
 <script type="module" src="firebase.js"></script>
-<script type="module" src="notify.js"></script>
 <script src="theme.js"></script>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
-  import { markRead } from "./notify.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
   import {
-    collection, query, orderBy, onSnapshot
+    collection, query, orderBy, onSnapshot,
+    doc, updateDoc
   } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-  const listEl = document.getElementById("notiList");
-  const emptyEl = document.getElementById("empty");
-  let uid=null;
+  const listEl=document.getElementById("list");
+  const emptyEl=document.getElementById("empty");
 
   onAuthStateChanged(auth,(user)=>{
-    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
-    uid=user.uid;
+    if(!user){location.href="login.html";return;}
+    const uid=user.uid;
 
-    const q = query(
+    const q=query(
       collection(db,"notifications",uid,"items"),
       orderBy("createdAt","desc")
     );
@@ -52,40 +48,27 @@
 
       snap.forEach(d=>{
         const n=d.data();
-        const id=d.id;
-
-        const row=document.createElement("div");
-        row.className="row noti fade-in "+(n.read?"":"unread");
-
         const timeStr = n.createdAt?.toDate
           ? n.createdAt.toDate().toLocaleString()
           : "";
 
+        const row=document.createElement("div");
+        row.className=`row noti fade-in ${n.isRead?"":"unread"}`;
         row.innerHTML=`
-          <img class="avatar" src="${n.fromAvatar||'default.png'}" style="width:48px;height:48px;">
+          <div class="icon">${n.icon||"🔔"}</div>
           <div style="flex:1">
-            <div style="font-weight:900">
-              ${n.read?"":"<span class='dot'></span>"}
-              ${n.fromName||"Ai đó"}
-            </div>
-            <div class="muted">${renderText(n)}</div>
-            <div class="muted" style="font-size:11px;margin-top:4px;">${timeStr}</div>
+            <div style="font-weight:900">${escapeHtml(n.title||"")}</div>
+            <div>${escapeHtml(n.body||"")}</div>
+            <div class="muted" style="font-size:11px;margin-top:2px;">${timeStr}</div>
           </div>
+          ${n.link?`<a class="tag" href="${n.link}">Xem</a>`:""}
         `;
 
-        row.onclick = async ()=>{
-          if(!n.read) await markRead(uid,id);
-
-          // Điều hướng theo loại noti
-          if(n.type==="like"){
-            location.href = `profile_public.html?uid=${n.fromUid}`;
+        row.onclick=async ()=>{
+          if(!n.isRead){
+            await updateDoc(doc(db,"notifications",uid,"items",d.id),{isRead:true});
           }
-          if(n.type==="match"){
-            location.href = `chat.html?match=${n.matchId}`;
-          }
-          if(n.type==="message"){
-            location.href = `chat.html?match=${n.matchId}`;
-          }
+          if(n.link) location.href=n.link;
         };
 
         listEl.appendChild(row);
@@ -93,15 +76,13 @@
     });
   });
 
-  function renderText(n){
-    if(n.type==="like") return "đã thả tim bạn 💗";
-    if(n.type==="match") return "đã match với bạn 🎉";
-    if(n.type==="message") return `nhắn: "${n.text||""}" 💬`;
-    return n.text||"";
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[m]));
   }
 </script>
 
-<!-- NAV + GUARD -->
 <script type="module">
   import { renderNav } from "./nav.js";
   import { requireAuth } from "./guard.js";
