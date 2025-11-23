@@ -1,194 +1,162 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NearLove - Chat</title>
-
-  <style>
-    * { box-sizing: border-box; }
-    body{
-      margin:0;
-      font-family: Arial, sans-serif;
-      background:#f6f7fb;
-      color:#222;
-      display:flex;
-      flex-direction:column;
-      height:100vh;
-    }
-
-    header{
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      color:white;
-      padding:12px 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-    }
-    header .left{
-      display:flex; align-items:center; gap:10px;
-    }
-    .avatar{
-      width:38px; height:38px; border-radius:50%;
-      object-fit:cover; background:#fff;
-      border:2px solid rgba(255,255,255,0.8);
-    }
-    header h1{ font-size:18px; margin:0; }
-    header a{
-      color:white; text-decoration:none; font-weight:bold;
-      background: rgba(255,255,255,0.15);
-      padding:6px 10px; border-radius:999px;
-      font-size:14px;
-    }
-
-    .chat{
-      flex:1;
-      padding:12px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      padding-bottom: 70px;
-    }
-    .msg{
-      max-width:78%;
-      padding:10px 12px;
-      border-radius:14px;
-      font-size:15px;
-      line-height:1.45;
-      box-shadow:0 4px 10px rgba(0,0,0,0.06);
-      animation: pop 0.12s ease-out;
-    }
-    @keyframes pop{ from{transform:scale(0.98);opacity:0.5} to{transform:scale(1);opacity:1} }
-
-    .msg.you{
-      align-self:flex-end;
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      color:white;
-      border-bottom-right-radius:4px;
-    }
-    .msg.them{
-      align-self:flex-start;
-      background:white;
-      border-bottom-left-radius:4px;
-    }
-    .time{
-      font-size:11px; opacity:0.6; margin-top:4px;
-    }
-
-    .input-bar{
-      padding:10px;
-      display:flex; gap:8px;
-      border-top:1px solid #e7e8ee;
-      background:white;
-      position: fixed; left:0; right:0; bottom:48px;
-    }
-    input{
-      flex:1;
-      padding:12px;
-      border-radius:999px;
-      border:1px solid #ddd;
-      outline:none;
-      font-size:15px;
-    }
-    button{
-      background: linear-gradient(135deg, #ff3d7f, #ff8ac9);
-      color:white;
-      border:none;
-      padding:0 18px;
-      border-radius:999px;
-      font-weight:bold;
-      cursor:pointer;
-      font-size:15px;
-    }
-
-    .nav{
-      display:flex;
-      justify-content:space-around;
-      background:white;
-      border-top:1px solid #eee;
-      padding:8px 0;
-      font-size:13px;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-    }
-    .nav a{
-      text-decoration:none;
-      color:#666;
-      display:flex; flex-direction:column; align-items:center;
-      gap:2px;
-      font-weight:bold;
-    }
-    .nav a.active{ color:#ff2e73; }
-  </style>
+<meta charset="UTF-8" />
+<title>NearLove - Chat</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  body{padding:0;padding-bottom:74px;}
+  header{
+    position:sticky;top:0;z-index:10;
+    background:#121625;border-bottom:1px solid rgba(255,255,255,0.08);
+    padding:10px 12px;display:flex;align-items:center;gap:10px;
+  }
+  #messages{
+    height:calc(100vh - 140px);
+    overflow-y:auto;padding:12px;background:transparent;
+  }
+  .bubble{
+    max-width:75%;padding:10px 12px;border-radius:14px;margin:6px 0;
+    display:flex;flex-direction:column;gap:4px;font-size:15px;
+  }
+  .me{
+    margin-left:auto;background:linear-gradient(135deg,#ff3d7f,#ff8ac9);
+  }
+  .other{
+    margin-right:auto;background:#151824;border:1px solid rgba(255,255,255,0.08);
+  }
+  .time{font-size:11px;opacity:.8;}
+  footer{
+    position:fixed;left:0;right:0;bottom:74px;
+    background:#121625;border-top:1px solid rgba(255,255,255,0.08);
+    padding:8px;display:flex;gap:8px;
+  }
+  footer input{
+    margin:0;border-radius:999px;
+  }
+  footer button{width:auto;border-radius:999px;padding:10px 16px;}
+</style>
 </head>
 <body>
 
 <header>
-  <div class="left">
-    <img class="avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop" />
-    <div>
-      <h1>Linh 💗</h1>
-      <div style="font-size:12px;opacity:.9">Online</div>
-    </div>
+  <img id="otherAvatar" class="avatar" style="width:44px;height:44px;">
+  <div style="flex:1">
+    <div id="otherName" style="font-weight:900;font-size:16px;">...</div>
+    <div id="otherMeta" class="muted" style="font-size:12px;"></div>
   </div>
-  <a href="match.html">Ghép đôi</a>
+  <a href="match.html" class="tag">← Match</a>
 </header>
 
-<div class="chat" id="chat">
-  <div class="msg them">
-    Chào bạn 😊 bạn đang làm gì đó?
-    <div class="time">16:20</div>
-  </div>
-  <div class="msg you">
-    Mình đang test NearLove demo nè 😄
-    <div class="time">16:21</div>
-  </div>
-  <div class="msg them">
-    Ôi thú vị vậy, NearLove có gì hay?
-    <div class="time">16:21</div>
-  </div>
-</div>
+<div id="messages"></div>
 
-<div class="input-bar">
-  <input id="input" placeholder="Nhập tin nhắn..." />
-  <button onclick="sendMsg()">Gửi</button>
-</div>
+<footer>
+  <input id="text" placeholder="Nhập tin nhắn...">
+  <button class="btn" onclick="sendMessage()">Gửi</button>
+</footer>
 
-<div class="nav">
-  <a href="index.html">🏠<span>Home</span></a>
-  <a href="match.html">💗<span>Match</span></a>
-  <a class="active" href="chat.html">💬<span>Chat</span></a>
-  <a href="vip.html">👑<span>VIP</span></a>
-  <a href="profile.html">👤<span>Profile</span></a>
-</div>
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
 
-<script>
-  function sendMsg(){
-    const input = document.getElementById("input");
-    const text = input.value.trim();
-    if(!text) return;
+<script type="module">
+import { auth, db } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+import {
+  doc, collection, addDoc, orderBy, query, onSnapshot,
+  serverTimestamp, getDoc
+} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-    const chat = document.getElementById("chat");
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
+const params = new URLSearchParams(location.search);
+const matchId = params.get("match");
+if(!matchId){ alert("Thiếu matchId!"); location.href="match.html"; }
 
-    const div = document.createElement("div");
-    div.className = "msg you";
-    div.innerHTML = text + `<div class="time">${hh}:${mm}</div>`;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-    input.value = "";
+const messagesDiv = document.getElementById("messages");
+const msgRef = collection(db, "chats", matchId, "messages");
 
-    setTimeout(()=>{
-      const reply = document.createElement("div");
-      reply.className = "msg them";
-      reply.innerHTML = "Hay đó 😍 kể thêm đi!" + `<div class="time">${hh}:${mm}</div>`;
-      chat.appendChild(reply);
-      chat.scrollTop = chat.scrollHeight;
-    }, 700);
+let currentUid=null, otherUid=null, otherProfile=null;
+
+// lấy uid đối phương từ match
+async function loadOtherFromMatch(myUid){
+  const mSnap = await getDoc(doc(db,"matches", matchId));
+  if(!mSnap.exists()){
+    alert("Match không tồn tại!");
+    location.href="match.html";
+    return;
   }
+  const users = mSnap.data().users || [];
+  otherUid = users.find(u=>u!==myUid);
+
+  const oSnap = await getDoc(doc(db,"users", otherUid));
+  otherProfile = oSnap.exists()?oSnap.data():{};
+
+  // render header
+  document.getElementById("otherAvatar").src = otherProfile.avatar || "default.png";
+  document.getElementById("otherName").innerText =
+    `${otherProfile.name || "Người ấy"} ${otherProfile.vipTier?`👑VIP${otherProfile.vipTier}`:""}`;
+  document.getElementById("otherMeta").innerText =
+    `${otherProfile.gender||""} ${otherProfile.age?`• ${otherProfile.age} tuổi`:""}`;
+}
+
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+  currentUid = user.uid;
+  await loadOtherFromMatch(currentUid);
+
+  const q = query(msgRef, orderBy("time","asc"));
+  onSnapshot(q, (snap)=>{
+    messagesDiv.innerHTML="";
+    snap.forEach(d=>{
+      const data=d.data();
+      const div=document.createElement("div");
+      div.className="bubble "+(data.from===currentUid?"me":"other");
+
+      const timeStr = data.time?.toDate
+        ? data.time.toDate().toLocaleString()
+        : "";
+
+      div.innerHTML = `
+        <div>${escapeHtml(data.text||"")}</div>
+        <div class="time">${timeStr}</div>
+      `;
+      messagesDiv.appendChild(div);
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  });
+});
+
+window.sendMessage = async ()=>{
+  const textEl=document.getElementById("text");
+  const t=textEl.value.trim();
+  if(!t) return;
+
+  await addDoc(msgRef,{
+    from: currentUid,
+    to: otherUid,
+    text: t,
+    time: serverTimestamp()
+  });
+
+  // update lastMessage cho inbox
+  await addDoc(collection(db,"chats", matchId, "meta"),{
+    lastText: t, lastTime: serverTimestamp()
+  }).catch(()=>{});
+
+  textEl.value="";
+};
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[m]));
+}
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("match");
 </script>
 
 </body>
