@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Trang trí nhà</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  #room{
+    position:relative;height:360px;border-radius:16px;
+    background:linear-gradient(180deg,#2a2f45,#141827);
+    border:1px solid rgba(255,255,255,0.08);
+    overflow:hidden;
+  }
+  .item{
+    position:absolute;font-size:34px;cursor:grab;user-select:none;
+    transform:translate(-50%,-50%);
+  }
+  .shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:700px){.shop-grid{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🏠 Trang trí nhà</h2>
+
+  <div class="box">
+    <div id="houseInfo" class="muted">Đang tải...</div>
+    <div id="room" style="margin-top:10px;"></div>
+    <button class="btn light" style="margin-top:10px" onclick="saveDecor()">💾 Lưu bố cục</button>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:8px;">Shop décor (mua bằng xu)</div>
+    <div id="shop" class="shop-grid"></div>
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const room = document.getElementById("room");
+  const shopEl = document.getElementById("shop");
+  const msgEl = document.getElementById("msg");
+  const houseInfo = document.getElementById("houseInfo");
+
+  let uid=null;
+  let decor=[]; // {itemId,name,icon,x,y}
+  let dragging=null;
+
+  // décor items MVP
+  const DECOR_SHOP = [
+    {id:"sofa1", name:"Sofa hồng", icon:"🛋️", cost:120},
+    {id:"plant1", name:"Cây cảnh", icon:"🪴", cost:80},
+    {id:"lamp1", name:"Đèn ngủ", icon:"💡", cost:60},
+    {id:"tv1", name:"TV lớn", icon:"📺", cost:150},
+    {id:"bear1", name:"Gấu bông", icon:"🧸", cost:50},
+    {id:"music1", name:"Loa EDM", icon:"🎧", cost:100},
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){alert("Bạn chưa đăng nhập!");location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+
+    // load house + decor
+    const hRef = doc(db,"houses",uid);
+    const hSnap = await getDoc(hRef);
+    const h = hSnap.exists()?hSnap.data():{};
+    const active = h.activeHouse || {name:"Nhà nhỏ",level:1,icon:"🏠"};
+    decor = h.decor || [];
+
+    houseInfo.innerHTML = `Nhà hiện tại: <b>${active.icon} ${active.name}</b> • Lv.${active.level||1}`;
+
+    renderRoom();
+    renderShop();
+  });
+
+  function renderRoom(){
+    room.innerHTML="";
+    decor.forEach((it, idx)=>{
+      const d=document.createElement("div");
+      d.className="item";
+      d.innerText=it.icon;
+      d.style.left=it.x+"px";
+      d.style.top=it.y+"px";
+      d.dataset.idx=idx;
+
+      d.addEventListener("pointerdown",(e)=>{
+        dragging=idx;
+        d.setPointerCapture(e.pointerId);
+      });
+      d.addEventListener("pointermove",(e)=>{
+        if(dragging!==idx) return;
+        const rect=room.getBoundingClientRect();
+        const x=e.clientX-rect.left;
+        const y=e.clientY-rect.top;
+        decor[idx].x=clamp(x,20,rect.width-20);
+        decor[idx].y=clamp(y,20,rect.height-20);
+        d.style.left=decor[idx].x+"px";
+        d.style.top=decor[idx].y+"px";
+      });
+      d.addEventListener("pointerup",()=> dragging=null);
+
+      // long press remove (MVP)
+      d.addEventListener("dblclick",()=>{
+        if(confirm("Gỡ vật phẩm này khỏi nhà?")){
+          decor.splice(idx,1);
+          renderRoom();
+        }
+      });
+
+      room.appendChild(d);
+    });
+  }
+
+  function renderShop(){
+    shopEl.innerHTML="";
+    DECOR_SHOP.forEach(it=>{
+      const card=document.createElement("div");
+      card.className="card fade-in";
+      card.innerHTML=`
+        <div style="font-size:32px;text-align:center">${it.icon}</div>
+        <div style="font-weight:900;text-align:center">${it.name}</div>
+        <div class="muted" style="text-align:center">Giá: ${it.cost} xu</div>
+        <button class="btn" style="margin-top:6px" onclick="buyDecor('${it.id}')">Mua & đặt</button>
+      `;
+      shopEl.appendChild(card);
+    });
+  }
+
+  window.buyDecor = async (itemId)=>{
+    const it=DECOR_SHOP.find(x=>x.id===itemId);
+    if(!it) return;
+
+    const res=await spendCoins(it.cost);
+    if(!res.ok){ alert("Không đủ xu!"); return; }
+
+    // auto place center
+    const rect=room.getBoundingClientRect();
+    decor.push({
+      itemId: it.id, name: it.name, icon: it.icon,
+      x: rect.width/2, y: rect.height/2
+    });
+    renderRoom();
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Đã mua ${it.name} và đặt vào nhà.`;
+  };
+
+  window.saveDecor = async ()=>{
+    if(!uid) return;
+    await setDoc(doc(db,"houses",uid),{
+      decor,
+      updatedAt: serverTimestamp()
+    },{merge:true});
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText="💾 Đã lưu bố cục nhà!";
+  };
+
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("house");
+</script>
+
+</body>
+</html>
