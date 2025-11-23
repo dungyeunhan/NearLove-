@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - War Admin</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>⚔️ War Admin — Chốt tuần</h2>
+  <div class="box" id="info">Đang tải...</div>
+  <div id="list" style="margin-top:10px;"></div>
+  <button class="btn red" style="margin-top:10px;" onclick="finalizeWeek()">
+    🏁 Chốt tuần & phát thưởng
+  </button>
+  <p id="msg" class="muted"></p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, getDocs,
+    doc, getDoc, updateDoc, setDoc, serverTimestamp, increment
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const infoEl=document.getElementById("info");
+  const listEl=document.getElementById("list");
+  const msgEl=document.getElementById("msg");
+
+  const ADMIN_UIDS=["PUT_YOUR_UID_HERE"];
+
+  let weekKey=null;
+  let topGuilds=[];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    if(!ADMIN_UIDS.includes(user.uid)){
+      alert("Bạn không có quyền admin.");
+      location.href="index.html"; return;
+    }
+
+    weekKey = getISOWeekKey();
+
+    const q=query(collection(db,"guilds"), orderBy("warPoints","desc"));
+    const snap=await getDocs(q);
+    topGuilds=[];
+    snap.forEach(d=> topGuilds.push({id:d.id, ...d.data()}));
+
+    render();
+  });
+
+  function render(){
+    infoEl.innerHTML=`
+      <div style="font-weight:900">Tuần hiện tại: ${weekKey}</div>
+      <div class="muted">Top 5 sẽ được thưởng:</div>
+      <div class="muted">#1 +2000 quỹ • mỗi thành viên +200 xu</div>
+      <div class="muted">#2 +1200 quỹ • mỗi thành viên +120 xu</div>
+      <div class="muted">#3 +800 quỹ • mỗi thành viên +80 xu</div>
+      <div class="muted">#4 +400 quỹ • mỗi thành viên +40 xu</div>
+      <div class="muted">#5 +200 quỹ • mỗi thành viên +20 xu</div>
+    `;
+
+    listEl.innerHTML = topGuilds.slice(0,10).map((g,i)=>`
+      <div class="row">
+        <div class="rank">${i+1}</div>
+        <div style="font-size:26px">${g.badge||"🏰"}</div>
+        <div style="flex:1">
+          <div class="name">${g.name}</div>
+          <div class="sub">Điểm War: ${g.warPoints||0} • TV: ${(g.members||[]).length}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  window.finalizeWeek = async ()=>{
+    if(!confirm("Chốt tuần sẽ phát thưởng và reset warPoints. Tiếp tục?")) return;
+
+    const rewards = [
+      {pool:2000, member:200},
+      {pool:1200, member:120},
+      {pool:800,  member:80},
+      {pool:400,  member:40},
+      {pool:200,  member:20},
+    ];
+
+    for(let i=0;i<5;i++){
+      const g = topGuilds[i];
+      if(!g) continue;
+
+      const r = rewards[i];
+      const gRef = doc(db,"guilds", g.id);
+
+      // cộng quỹ bang
+      await updateDoc(gRef,{
+        coinsPool: increment(r.pool),
+        warPoints: 0,         // reset tuần (MVP)
+        warWeek: weekKey      // giữ key (tuần mới sẽ auto reset lại)
+      });
+
+      // thưởng xu cho thành viên
+      for(const mUid of (g.members||[])){
+        await updateDoc(doc(db,"users",mUid),{
+          coins: increment(r.member)
+        }).catch(()=>{});
+      }
+
+      // lưu lịch sử
+      await setDoc(doc(db,"warResults",weekKey,"guilds",g.id),{
+        points: g.warPoints||0,
+        rank: i+1,
+        rewardPool: r.pool,
+        time: serverTimestamp()
+      });
+    }
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText="✅ Đã chốt tuần và phát thưởng!";
+
+    alert("Xong! Tuần mới sẽ tự chạy.");
+    location.reload();
+  };
+
+  function getISOWeekKey(){
+    const d = new Date();
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,"0")}`;
+  }
+</script>
+
+</body>
+</html>
