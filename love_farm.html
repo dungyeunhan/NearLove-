@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Love Farm</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .plot{display:flex;align-items:center;justify-content:space-between;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🌾 Love Farm</h2>
+
+  <div class="box">
+    <div class="muted">Trồng cây 5 phút → thu hoạch xu.</div>
+    <button class="btn" onclick="plant()">🌱 Trồng cây mới</button>
+    <p id="msg" class="muted"></p>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Ruộng của bạn</div>
+    <div id="plots" style="margin-top:8px;"></div>
+    <p id="empty" class="muted" style="display:none;">Chưa có cây nào.</p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const plotsEl=document.getElementById("plots");
+  const emptyEl=document.getElementById("empty");
+  const msg=document.getElementById("msg");
+
+  let uid=null, farm=null;
+
+  const CROPS=[
+    {id:"rose", name:"Hoa hồng", icon:"🌹", time:5*60*1000, reward:40},
+    {id:"cake", name:"Bánh ngọt", icon:"🍰", time:5*60*1000, reward:50},
+    {id:"gem",  name:"Hạt pha lê", icon:"💎", time:5*60*1000, reward:70},
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){alert("Bạn chưa đăng nhập!");location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+
+    await loadFarm();
+    renderFarm();
+
+    setInterval(async ()=>{
+      await loadFarm();
+      renderFarm();
+    },1000);
+  });
+
+  async function loadFarm(){
+    const fRef=doc(db,"farms",uid);
+    const fSnap=await getDoc(fRef);
+    farm = fSnap.exists()?fSnap.data():{crops:[]};
+  }
+
+  window.plant = async ()=>{
+    const crop=CROPS[Math.floor(Math.random()*CROPS.length)];
+    const now=Date.now();
+    const planted={
+      cropId: crop.id,
+      name: crop.name,
+      icon: crop.icon,
+      plantedAt: now,
+      readyAt: now + crop.time,
+      reward: crop.reward,
+      status:"growing"
+    };
+
+    farm.crops = farm.crops || [];
+    farm.crops.push(planted);
+
+    await setDoc(doc(db,"farms",uid),farm,{merge:true});
+    msg.style.color="lightgreen";
+    msg.innerText=`🌱 Đã trồng ${crop.icon} ${crop.name}. 5 phút sau thu hoạch!`;
+    renderFarm();
+  };
+
+  async function harvest(idx){
+    const c=farm.crops[idx];
+    if(!c || c.status!=="ready") return;
+
+    await addCoins(c.reward);
+    farm.crops.splice(idx,1);
+    await setDoc(doc(db,"farms",uid),farm,{merge:true});
+
+    alert(`🎉 Thu hoạch ${c.icon} +${c.reward} xu!`);
+    renderFarm();
+  }
+
+  function renderFarm(){
+    plotsEl.innerHTML="";
+    const crops=farm.crops||[];
+    if(crops.length===0){ emptyEl.style.display="block"; return; }
+    emptyEl.style.display="none";
+
+    const now=Date.now();
+    crops.forEach((c,idx)=>{
+      const left=Math.max(0, c.readyAt-now);
+      const ready=left===0;
+
+      if(ready) c.status="ready";
+
+      const row=document.createElement("div");
+      row.className="row plot fade-in";
+      row.innerHTML=`
+        <div>
+          <div style="font-weight:900">${c.icon} ${c.name}</div>
+          <div class="muted">${ready?`Sẵn sàng thu hoạch!`:`Còn ${Math.ceil(left/1000)}s`}</div>
+        </div>
+        <button class="btn ${ready?'':'light'}" style="width:auto;min-width:120px"
+          ${ready?'':'disabled'}>
+          Thu hoạch +${c.reward}
+        </button>
+      `;
+      row.querySelector("button").onclick=()=>harvest(idx);
+      plotsEl.appendChild(row);
+    });
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("event");
+</script>
+
+</body>
+</html>
