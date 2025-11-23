@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Feed</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .post{display:flex;flex-direction:column;gap:8px;}
+  .postHead{display:flex;gap:8px;align-items:center;}
+  .img{width:100%;border-radius:12px;max-height:380px;object-fit:cover;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .storyRow{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
+  .story{min-width:120px}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📸 Feed NearLove</h2>
+
+  <!-- STORIES -->
+  <div class="box">
+    <div style="font-weight:900;margin-bottom:6px;">Story 24h</div>
+    <div class="storyRow" id="stories"></div>
+    <button class="btn light" style="margin-top:6px;width:auto" onclick="newStory()">➕ Đăng story</button>
+  </div>
+
+  <!-- CREATE POST -->
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Đăng bài mới</div>
+    <textarea id="text" rows="3" placeholder="Bạn đang nghĩ gì?"></textarea>
+    <input id="imgUrl" placeholder="Link ảnh (optional)">
+    <button class="btn" style="margin-top:6px" onclick="post()">Đăng</button>
+    <p id="msg" class="muted"></p>
+  </div>
+
+  <!-- POSTS -->
+  <div id="feed" style="margin-top:10px;"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có bài viết.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="feed.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { createPost, toggleLike, addComment, createStory, cleanupStories } from "./feed.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, limit, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const feedEl=document.getElementById("feed");
+  const emptyEl=document.getElementById("empty");
+  const storiesEl=document.getElementById("stories");
+  const msgEl=document.getElementById("msg");
+  const $=id=>document.getElementById(id);
+
+  let uid=null, me=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+
+    await cleanupStories();
+    listenStories();
+    listenPosts();
+  });
+
+  window.post = async ()=>{
+    const text=$("text").value.trim();
+    const img=$("imgUrl").value.trim();
+    if(!text && !img){alert("Nhập nội dung hoặc link ảnh.");return;}
+
+    msgEl.innerText="Đang đăng...";
+    const res=await createPost(text,img);
+    if(!res.ok){msgEl.style.color="red";msgEl.innerText="Lỗi đăng bài.";return;}
+    msgEl.style.color="lightgreen";msgEl.innerText="✅ Đã đăng!";
+    $("text").value=""; $("imgUrl").value="";
+  };
+
+  window.newStory = async ()=>{
+    const text=prompt("Nội dung story:","")||"";
+    const img=prompt("Link ảnh story (optional):","")||"";
+    if(!text && !img) return;
+    await createStory(text,img);
+    alert("✅ Đã đăng story 24h!");
+  };
+
+  function listenStories(){
+    const q=query(collection(db,"stories"), orderBy("createdAt","desc"), limit(30));
+    onSnapshot(q,(snap)=>{
+      storiesEl.innerHTML="";
+      snap.forEach(d=>{
+        const s=d.data();
+        const card=document.createElement("div");
+        card.className="card story fade-in";
+        card.innerHTML=`
+          <div class="postHead">
+            <img class="avatar" src="${s.avatar||'default.png'}" style="width:32px;height:32px;">
+            <div style="flex:1">
+              <div style="font-weight:900;color:${s.vipColor||'#ddd'}">${s.name}</div>
+              <div class="muted" style="font-size:11px;">VIP${s.vipTier||0}</div>
+            </div>
+          </div>
+          ${s.imageUrl?`<img class="img" src="${s.imageUrl}">`:""}
+          ${s.text?`<div>${escapeHtml(s.text)}</div>`:""}
+        `;
+        storiesEl.appendChild(card);
+      });
+    });
+  }
+
+  function listenPosts(){
+    const q=query(collection(db,"posts"), orderBy("createdAt","desc"), limit(50));
+
+    onSnapshot(q,(snap)=>{
+      feedEl.innerHTML="";
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
+
+      snap.forEach(d=>{
+        const p=d.data();
+        const liked=(p.likedBy||[]).includes(uid);
+
+        const card=document.createElement("div");
+        card.className="card post fade-in";
+
+        card.innerHTML=`
+          <div class="postHead">
+            <img class="avatar" src="${p.avatar||'default.png'}" style="width:40px;height:40px;">
+            <div style="flex:1">
+              <div style="font-weight:900;color:${p.vipColor||'#ddd'}">
+                ${p.name}
+                ${p.vipTier>0?`<span class="tag" style="background:${p.vipColor};color:#111;margin-left:4px;">VIP</span>`:""}
+              </div>
+              <div class="muted" style="font-size:11px;">
+                ${p.createdAt?.toDate?p.createdAt.toDate().toLocaleString():""}
+              </div>
+            </div>
+          </div>
+
+          ${p.text?`<div>${escapeHtml(p.text)}</div>`:""}
+          ${p.imageUrl?`<img class="img" src="${p.imageUrl}">`:""}
+
+          <div class="actions">
+            <button class="btn light" style="width:auto" onclick="like('${d.id}')">
+              ${liked?"💔 Bỏ thích":"❤️ Thích"} (${p.likesCount||0})
+            </button>
+
+            <button class="btn light" style="width:auto" onclick="comment('${d.id}')">
+              💬 Bình luận (${p.commentsCount||0})
+            </button>
+          </div>
+
+          <div id="c_${d.id}" class="muted small"></div>
+        `;
+
+        feedEl.appendChild(card);
+        listenComments(d.id);
+      });
+    });
+  }
+
+  window.like = async (postId)=>{
+    await toggleLike(postId);
+  };
+
+  window.comment = async (postId)=>{
+    const t=prompt("Nhập bình luận:","")||"";
+    if(!t.trim()) return;
+    await addComment(postId, t);
+  };
+
+  function listenComments(postId){
+    const box=document.getElementById("c_"+postId);
+    const q=query(collection(db,"posts",postId,"comments"), orderBy("createdAt","desc"), limit(3));
+
+    onSnapshot(q,(snap)=>{
+      if(snap.empty){ box.innerHTML=""; return; }
+      const arr=[];
+      snap.forEach(d=>{
+        const c=d.data();
+        arr.push(`<div>• <b>${escapeHtml(c.name||"")}</b>: ${escapeHtml(c.text||"")}</div>`);
+      });
+      box.innerHTML=arr.join("");
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[m]));
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("feed");
+</script>
+
+</body>
+</html>
