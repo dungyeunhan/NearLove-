@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Event Room</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  body{padding:0;padding-bottom:74px;}
+  header{position:sticky;top:0;background:#121625;padding:10px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  #messages{height:calc(100vh - 210px);overflow-y:auto;padding:12px;}
+  footer{position:fixed;left:0;right:0;bottom:74px;background:#121625;padding:8px;display:flex;gap:8px;}
+  footer input{margin:0;border-radius:999px;}
+  .quest{display:flex;justify-content:space-between;gap:8px;align-items:center;}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="font-weight:900" id="title">Event Room</div>
+  <div class="muted" id="countdown"></div>
+</header>
+
+<div class="container" style="padding-top:8px;">
+  <div class="box" id="questBox">
+    <div style="font-weight:900;">🎯 Nhiệm vụ event</div>
+    <div id="quests" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<div id="messages"></div>
+
+<footer>
+  <input id="text" placeholder="Chat trong event...">
+  <button class="btn" onclick="sendMsg()">Gửi</button>
+</footer>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="events.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { getEvent, ensureEventProgress, incEventStat, claimQuest } from "./events.js";
+  import { getMyVip } from "./vip.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, collection, addDoc,
+    query, orderBy, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const titleEl=document.getElementById("title");
+  const cdEl=document.getElementById("countdown");
+  const msgBox=document.getElementById("messages");
+  const textEl=document.getElementById("text");
+  const questsEl=document.getElementById("quests");
+
+  const params=new URLSearchParams(location.search);
+  const eventId=params.get("e");
+
+  let uid=null, me=null, event=null, progress=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.data()||{};
+
+    event=await getEvent(eventId);
+    if(!event){alert("Event không tồn tại.");location.href="events.html";return;}
+
+    // vipOnly check
+    if((me.vipTier||0)<(event.vipOnlyTier||0)){
+      alert("Event này chỉ dành cho VIP cao hơn.");
+      location.href="vip.html"; return;
+    }
+
+    titleEl.innerText=`${event.icon||"🎉"} ${event.name}`;
+    startCountdown();
+
+    progress=await ensureEventProgress(eventId, uid);
+    listenProgress();
+    listenMessages();
+  });
+
+  function startCountdown(){
+    const end = event.endAt?.toDate ? event.endAt.toDate().getTime() : 0;
+    const tick=()=>{
+      const left=end-Date.now();
+      cdEl.innerText= left<=0 ? "Event đã kết thúc" : "Còn lại: " + fmtLeft(left);
+      if(left<=0) clearInterval(timer);
+    };
+    tick();
+    const timer=setInterval(tick,1000);
+  }
+
+  function listenMessages(){
+    const q=query(collection(db,"eventRooms",eventId,"messages"), orderBy("time","asc"));
+    onSnapshot(q,(snap)=>{
+      msgBox.innerHTML="";
+      snap.forEach(d=>{
+        const m=d.data();
+        const row=document.createElement("div");
+        row.className="row fade-in";
+        row.innerHTML=`
+          <img class="avatar" src="${m.fromAvatar||'default.png'}" style="width:36px;height:36px;">
+          <div style="flex:1">
+            <b style="color:${m.fromVipColor||'#ddd'}">
+              ${m.fromName}
+              ${m.fromVipName?`<span class="tag" style="background:${m.fromVipColor};color:#111;margin-left:4px;">${m.fromVipName}</span>`:""}
+            </b>
+            <div>${escapeHtml(m.text||"")}</div>
+          </div>
+        `;
+        msgBox.appendChild(row);
+      });
+      msgBox.scrollTop=msgBox.scrollHeight;
+    });
+  }
+
+  window.sendMsg = async ()=>{
+    const t=textEl.value.trim();
+    if(!t) return;
+
+    if(event.endAt.toDate().getTime()<=Date.now()){
+      alert("Event đã hết giờ."); return;
+    }
+
+    await addDoc(collection(db,"eventRooms",eventId,"messages"),{
+      fromUid: uid,
+      fromName: me.name||uid,
+      fromAvatar: me.avatar||"default.png",
+      fromVipColor: me.vipColor||"#999",
+      fromVipName: me.vipName||"",
+      text: t,
+      time: serverTimestamp()
+    });
+    textEl.value="";
+
+    await incEventStat(eventId,"eventChat",1); // cộng quest stat
+  };
+
+  function listenProgress(){
+    onSnapshot(doc(db,"eventProgress",eventId,"users",uid),(snap)=>{
+      progress=snap.exists()?snap.data():progress;
+      renderQuests();
+    });
+  }
+
+  function renderQuests(){
+    questsEl.innerHTML="";
+    const stats=progress.stats||{};
+    const claimed=progress.claimed||{};
+    const quests=event.quests||[];
+
+    quests.forEach(q=>{
+      const cur=stats[q.statKey]||0;
+      const done=cur>=q.need;
+      const isClaimed=!!claimed[q.id];
+
+      const row=document.createElement("div");
+      row.className="row quest fade-in";
+      row.innerHTML=`
+        <div style="flex:1">
+          <div style="font-weight:900">${q.title}</div>
+          <div class="muted small">${cur}/${q.need} • thưởng ${q.rewardCoins} xu</div>
+        </div>
+        <button class="btn ${done&&!isClaimed?'':'light'}" style="width:auto"
+          ${done&&!isClaimed?'':'disabled'}>
+          ${isClaimed?'Đã nhận':'Nhận'}
+        </button>
+      `;
+      row.querySelector("button").onclick=()=>doClaim(q);
+      questsEl.appendChild(row);
+    });
+  }
+
+  async function doClaim(q){
+    const res=await claimQuest(eventId,q);
+    if(!res.ok){
+      alert(res.msg==="not enough"?"Chưa đủ điều kiện.":res.msg);
+      return;
+    }
+    alert("✅ Nhận thưởng event thành công!");
+  }
+
+  function fmtLeft(ms){
+    const s=Math.ceil(ms/1000);
+    const h=Math.floor(s/3600);
+    const m=Math.floor((s%3600)/60);
+    const r=s%60;
+    return `${h}h ${m}m ${r}s`;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[m]));
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("events");
+</script>
+
+</body>
+</html>
