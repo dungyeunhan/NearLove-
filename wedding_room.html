@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Phòng cưới</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  body{padding:0;padding-bottom:74px;}
+  header{
+    position:sticky;top:0;z-index:10;
+    background:#121625;border-bottom:1px solid rgba(255,255,255,0.08);
+    padding:10px 12px;display:flex;align-items:center;gap:10px;
+  }
+  .couple{
+    display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px;
+  }
+  .gift-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .gift-btn{width:auto;min-width:110px;}
+  #giftList{margin-top:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="font-size:22px;">💍</div>
+  <div style="flex:1">
+    <div id="title" style="font-weight:900;font-size:16px;">Phòng cưới</div>
+    <div class="muted" id="sub" style="font-size:12px;"></div>
+  </div>
+  <a href="wedding.html" class="tag">← Hôn lễ</a>
+</header>
+
+<div class="container">
+
+  <div class="box fade-in">
+    <div class="couple" id="coupleBox">Đang tải...</div>
+    <div class="muted" style="text-align:center;margin-top:8px;">
+      Tổng quà: <b id="totalGift">0</b> xu 🎁
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:6px;">🎁 Tặng quà cưới</div>
+    <div class="gift-row">
+      <button class="btn gift-btn" onclick="sendGift(20)">🌹 20 xu</button>
+      <button class="btn gift-btn" onclick="sendGift(50)">🍫 50 xu</button>
+      <button class="btn gift-btn" onclick="sendGift(100)">💐 100 xu</button>
+      <button class="btn gift-btn" onclick="sendGift(200)">💎 200 xu</button>
+      <button class="btn light gift-btn" onclick="customGift()">💝 Tuỳ chọn</button>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Danh sách quà cưới</div>
+    <div id="giftList"></div>
+    <p id="emptyGift" class="muted" style="display:none;">Chưa có quà nào.</p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, updateDoc, increment,
+    collection, addDoc, query, orderBy, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const titleEl=document.getElementById("title");
+  const subEl=document.getElementById("sub");
+  const coupleBox=document.getElementById("coupleBox");
+  const totalGiftEl=document.getElementById("totalGift");
+  const giftList=document.getElementById("giftList");
+  const emptyGift=document.getElementById("emptyGift");
+
+  const params=new URLSearchParams(location.search);
+  const weddingId=params.get("w");
+  if(!weddingId){ alert("Thiếu weddingId"); location.href="wedding.html"; }
+
+  let uid=null, me=null, wedding=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+    await ensureCoins();
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.exists()?meSnap.data():{};
+
+    const wSnap=await getDoc(doc(db,"weddings",weddingId));
+    if(!wSnap.exists()){
+      alert("Wedding không tồn tại."); location.href="wedding.html"; return;
+    }
+    wedding=wSnap.data();
+    renderWedding();
+
+    // realtime gifts list
+    const q=query(
+      collection(db,"weddingGifts",weddingId,"items"),
+      orderBy("time","desc")
+    );
+    onSnapshot(q,(snap)=>{
+      giftList.innerHTML="";
+      if(snap.empty){ emptyGift.style.display="block"; return; }
+      emptyGift.style.display="none";
+
+      snap.forEach(d=>{
+        const g=d.data();
+        const timeStr=g.time?.toDate?g.time.toDate().toLocaleString():"";
+        const row=document.createElement("div");
+        row.className="row fade-in";
+        row.innerHTML=`
+          <img class="avatar" src="${g.fromAvatar||'default.png'}" style="width:40px;height:40px;">
+          <div style="flex:1">
+            <div style="font-weight:900">${g.fromName||"Ai đó"} 🎁 ${g.amount} xu</div>
+            <div class="muted">${g.message||""}</div>
+          </div>
+          <div class="muted" style="font-size:11px;">${timeStr}</div>
+        `;
+        giftList.appendChild(row);
+      });
+    });
+
+    // realtime tổng quà
+    onSnapshot(doc(db,"weddings",weddingId),(ds)=>{
+      if(ds.exists()){
+        wedding=ds.data();
+        totalGiftEl.innerText=wedding.giftsTotal||0;
+      }
+    });
+  });
+
+  function renderWedding(){
+    titleEl.innerText=`💍 Hôn lễ của ${wedding.aName} & ${wedding.bName}`;
+    subEl.innerText=`WeddingID: ${weddingId}`;
+
+    coupleBox.innerHTML=`
+      <div style="text-align:center">
+        <img class="avatar" src="${wedding.aAvatar||'default.png'}">
+        <div style="font-weight:900;margin-top:4px">${wedding.aName}</div>
+      </div>
+      <div style="font-size:26px;font-weight:900;">💞</div>
+      <div style="text-align:center">
+        <img class="avatar" src="${wedding.bAvatar||'default.png'}">
+        <div style="font-weight:900;margin-top:4px">${wedding.bName}</div>
+      </div>
+    `;
+    totalGiftEl.innerText=wedding.giftsTotal||0;
+  }
+
+  window.sendGift = async (amount)=>{
+    if(amount<=0) return;
+
+    const res = await spendCoins(amount);
+    if(!res.ok){ alert("Không đủ xu để tặng."); return; }
+
+    const msg = prompt("Lời chúc (tuỳ chọn):") || "";
+
+    await addDoc(collection(db,"weddingGifts",weddingId,"items"),{
+      fromUid: uid,
+      fromName: me.name||"Khách mời",
+      fromAvatar: me.avatar||"default.png",
+      amount,
+      message: msg,
+      time: serverTimestamp()
+    });
+
+    await updateDoc(doc(db,"weddings",weddingId),{
+      giftsTotal: increment(amount)
+    });
+
+    alert("🎉 Tặng quà thành công!");
+  };
+
+  window.customGift = ()=>{
+    const x = Number(prompt("Nhập số xu muốn tặng:")||0);
+    if(x>0) sendGift(x);
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("home");
+</script>
+
+</body>
+</html>
