@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Inbox</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>📥 Tin nhắn</h2>
+  <div id="inboxList"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có cuộc trò chuyện nào.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, where, onSnapshot, orderBy, limit,
+    doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const listEl=document.getElementById("inboxList");
+  const emptyEl=document.getElementById("empty");
+
+  let uid=null;
+
+  onAuthStateChanged(auth,(user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+
+    // lấy các match của mình
+    const mq=query(collection(db,"matches"), where("users","array-contains",uid));
+    onSnapshot(mq, async (snap)=>{
+      listEl.innerHTML="";
+
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
+
+      for(const m of snap.docs){
+        const matchId=m.id;
+        const users=m.data().users||[];
+        const otherUid=users.find(u=>u!==uid);
+
+        const otherSnap=await getDoc(doc(db,"users",otherUid));
+        const other=otherSnap.exists()?otherSnap.data():{};
+
+        // lấy last message (nếu có)
+        const msgQ=query(
+          collection(db,"chats",matchId,"messages"),
+          orderBy("time","desc"),
+          limit(1)
+        );
+
+        // snapshot con để realtime last msg
+        onSnapshot(msgQ,(ms)=>{
+          let last="Chưa có tin nhắn";
+          let time="";
+          ms.forEach(d=>{
+            const x=d.data();
+            last=x.text||last;
+            time=x.time?.toDate?x.time.toDate().toLocaleString():"";
+          });
+
+          const row=document.getElementById("row-"+matchId) || document.createElement("div");
+          row.id="row-"+matchId;
+          row.className="row fade-in";
+          row.innerHTML=`
+            <img class="avatar" src="${other.avatar||"default.png"}">
+            <div style="flex:1">
+              <div style="font-weight:900">
+                ${other.name||"Người ấy"} ${other.vipTier?`👑VIP${other.vipTier}`:""}
+              </div>
+              <div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">
+                ${last}
+              </div>
+            </div>
+            <div class="muted" style="font-size:11px;text-align:right;">
+              ${time}
+            </div>
+          `;
+          row.onclick=()=>location.href=`chat.html?match=${matchId}`;
+
+          if(!row.parentElement) listEl.appendChild(row);
+        });
+      }
+    });
+  });
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("match");
+</script>
+
+</body>
+</html>
