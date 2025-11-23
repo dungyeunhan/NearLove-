@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Market</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  @media(max-width:700px){.grid{grid-template-columns:1fr;}}
+  .price{font-weight:900;color:#ffd1e6;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🛒 Market NearLove</h2>
+
+  <!-- My wardrobe to sell -->
+  <div class="box">
+    <div style="font-weight:900;margin-bottom:6px;">Đăng bán từ tủ đồ</div>
+    <div id="myItems"></div>
+    <p id="emptyMy" class="muted" style="display:none;">Bạn chưa có item nào.</p>
+  </div>
+
+  <!-- Listings -->
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Market đang bán</div>
+    <div id="listings" class="grid" style="margin-top:8px;"></div>
+    <p id="emptyList" class="muted" style="display:none;">Chưa có listing nào.</p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="market.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { getWardrobe, createListing, buyListing, cancelListing } from "./market.js";
+  import { ensureCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, where, orderBy, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const myItemsEl=document.getElementById("myItems");
+  const emptyMy=document.getElementById("emptyMy");
+  const listingsEl=document.getElementById("listings");
+  const emptyList=document.getElementById("emptyList");
+
+  let uid=null, me=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+
+    await renderMyItems();
+    listenListings();
+  });
+
+  async function renderMyItems(){
+    const w=await getWardrobe(uid);
+    myItemsEl.innerHTML="";
+    if(!w.items || w.items.length===0){
+      emptyMy.style.display="block"; return;
+    }
+    emptyMy.style.display="none";
+
+    w.items.forEach(it=>{
+      const row=document.createElement("div");
+      row.className="row fade-in";
+      row.innerHTML=`
+        <div style="font-size:26px">${it.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:900">${it.name}</div>
+          <div class="muted">${it.type} • ${it.rarity||"common"}</div>
+        </div>
+        <button class="btn light" style="width:auto" onclick="sell('${it.itemId}')">Bán</button>
+      `;
+      myItemsEl.appendChild(row);
+    });
+  }
+
+  window.sell = async (itemId)=>{
+    const w=await getWardrobe(uid);
+    const it=w.items.find(x=>x.itemId===itemId);
+    if(!it){alert("Item không tồn tại.");return;}
+
+    const price=Number(prompt("Nhập giá bán (xu):","100")||0);
+    if(price<=0){alert("Giá không hợp lệ.");return;}
+
+    const res=await createListing(it, price);
+    if(!res.ok){alert("Lỗi bán: "+res.msg);return;}
+    alert("✅ Đã đăng bán!");
+    renderMyItems();
+  };
+
+  function listenListings(){
+    const q=query(
+      collection(db,"marketListings"),
+      where("status","==","active"),
+      orderBy("createdAt","desc")
+    );
+
+    onSnapshot(q,(snap)=>{
+      listingsEl.innerHTML="";
+      if(snap.empty){ emptyList.style.display="block"; return; }
+      emptyList.style.display="none";
+
+      snap.forEach(d=>{
+        const l=d.data();
+        const card=document.createElement("div");
+        card.className="card fade-in";
+        const isMine = l.sellerUid===uid;
+
+        card.innerHTML=`
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="font-size:34px">${l.item.icon}</div>
+            <div style="flex:1">
+              <div style="font-weight:900">${l.item.name}</div>
+              <div class="muted">${l.item.type} • ${l.item.rarity}</div>
+              <div class="price">${l.price} xu</div>
+              <div class="muted small">Seller: ${l.sellerName||l.sellerUid}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            ${isMine
+              ? `<button class="btn light" onclick="cancel('${d.id}')">Hủy bán</button>`
+              : `<button class="btn" onclick="buy('${d.id}')">Mua</button>`
+            }
+          </div>
+        `;
+        listingsEl.appendChild(card);
+      });
+    });
+  }
+
+  window.buy = async (listingId)=>{
+    if(!confirm("Mua item này?")) return;
+    const res=await buyListing(listingId);
+    if(!res.ok){alert("Không mua được: "+res.msg);return;}
+    alert("🎉 Mua thành công!");
+    renderMyItems();
+  };
+
+  window.cancel = async (listingId)=>{
+    if(!confirm("Hủy listing này?")) return;
+    const res=await cancelListing(listingId);
+    if(!res.ok){alert("Hủy lỗi: "+res.msg);return;}
+    alert("Đã hủy và trả item về tủ.");
+    renderMyItems();
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("market");
+</script>
+
+</body>
+</html>
