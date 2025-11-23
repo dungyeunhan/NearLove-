@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Bang War</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .m-item{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .m-left{display:flex;align-items:center;gap:10px;}
+  .m-icon{font-size:22px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>⚔️ Bang War Tuần</h2>
+
+  <div class="box" id="guildInfo">Đang tải...</div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:8px;">Nhiệm vụ War hôm nay</div>
+    <div id="missionList"></div>
+    <p id="msg" class="muted" style="margin-top:8px;"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp, increment
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const guildInfo = document.getElementById("guildInfo");
+  const missionList = document.getElementById("missionList");
+  const msgEl = document.getElementById("msg");
+
+  let uid=null, me=null, guildId=null, guild=null;
+  let weekKey=null, dailyRef=null, dailyData=null;
+
+  const WAR_MISSIONS = [
+    { id:"checkin", icon:"✅", title:"Điểm danh War", desc:"Điểm danh nhận điểm War", points:40, reward:8 },
+    { id:"chat", icon:"💬", title:"Chat War", desc:"Gửi 1 tin nhắn trong chat bang", points:25, reward:5 },
+    { id:"match", icon:"💗", title:"Match War", desc:"Có 1 match mới", points:60, reward:10 },
+    { id:"donate", icon:"💰", title:"Donate War", desc:"Donate bất kỳ vào quỹ bang", points:50, reward:8 },
+    { id:"shop", icon:"🛒", title:"Shop War", desc:"Bang mua 1 món trong shop bang", points:45, reward:6 }
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+    await ensureCoins();
+
+    const meSnap = await getDoc(doc(db,"users",uid));
+    me = meSnap.exists()?meSnap.data():{};
+    guildId = me.guildId;
+
+    if(!guildId){
+      alert("Bạn chưa vào bang nào.");
+      location.href="guild.html";
+      return;
+    }
+
+    // load guild
+    const gRef = doc(db,"guilds",guildId);
+    const gSnap = await getDoc(gRef);
+    guild = gSnap.data()||{};
+
+    // set week key
+    weekKey = getISOWeekKey();
+    if(guild.warWeek !== weekKey){
+      // reset war week mới
+      await updateDoc(gRef,{
+        warWeek: weekKey,
+        warPoints: 0
+      });
+      guild.warWeek = weekKey;
+      guild.warPoints = 0;
+    }
+
+    renderGuildInfo();
+
+    // load daily war log
+    const today = getTodayKey();
+    dailyRef = doc(db,"guildWar",guildId,"weeks",weekKey,"users",uid);
+    const dSnap = await getDoc(dailyRef);
+
+    if(!dSnap.exists() || dSnap.data().date !== today){
+      dailyData = {
+        date: today,
+        done: { checkin:false, chat:false, match:false, donate:false, shop:false },
+        pointsToday: 0
+      };
+      await setDoc(dailyRef, dailyData);
+    }else{
+      dailyData = dSnap.data();
+    }
+
+    renderMissions();
+  });
+
+  function renderGuildInfo(){
+    guildInfo.innerHTML = `
+      <div style="font-weight:900;font-size:18px;">
+        ${(guild.badge||"🏰")} ${guild.name||"Bang hội"}
+      </div>
+      <div class="muted">
+        Tuần War: <b>${weekKey}</b><br>
+        Điểm War tuần này: <b>${guild.warPoints||0}</b>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <a class="btn light" href="guild_chat.html">💬 Chat bang</a>
+        <a class="btn light" href="event.html">🏆 BXH War</a>
+        <a class="btn light" href="guild.html">← Về Bang</a>
+      </div>
+    `;
+  }
+
+  function renderMissions(){
+    missionList.innerHTML="";
+
+    WAR_MISSIONS.forEach(m=>{
+      const done = !!dailyData.done?.[m.id];
+
+      const row=document.createElement("div");
+      row.className="row m-item fade-in";
+      row.innerHTML=`
+        <div class="m-left">
+          <div class="m-icon">${m.icon}</div>
+          <div>
+            <div style="font-weight:900">${m.title}</div>
+            <div class="muted">${m.desc}</div>
+            <div class="muted">+${m.points} điểm War • thưởng ${m.reward} xu</div>
+          </div>
+        </div>
+        <button class="btn ${done?'light':''}" style="width:auto;min-width:110px"
+          ${done?'disabled':''}>
+          ${done?"Đã xong":"Hoàn thành"}
+        </button>
+      `;
+      row.querySelector("button").onclick=()=>completeMission(m);
+      missionList.appendChild(row);
+    });
+
+    msgEl.innerText = `Điểm War hôm nay bạn đã góp: ${dailyData.pointsToday||0}`;
+  }
+
+  async function completeMission(m){
+    if(dailyData.done[m.id]) return;
+
+    // mark done
+    dailyData.done[m.id]=true;
+    dailyData.pointsToday=(dailyData.pointsToday||0)+m.points;
+    await setDoc(dailyRef,dailyData,{merge:true});
+
+    // cộng warPoints cho bang
+    const gRef = doc(db,"guilds",guildId);
+    await updateDoc(gRef,{
+      warPoints: increment(m.points),
+      updatedAt: serverTimestamp()
+    });
+
+    // thưởng xu cá nhân
+    await addCoins(m.reward);
+
+    // reload guild war points
+    const gSnap=await getDoc(gRef);
+    guild=gSnap.data();
+    renderGuildInfo();
+    renderMissions();
+
+    alert(`✅ Hoàn thành War: ${m.title}!`);
+  }
+
+  function getTodayKey(){
+    const d=new Date();
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  // ISO week key: YYYY-W## (MVP)
+  function getISOWeekKey(){
+    const d = new Date();
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,"0")}`;
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("guild");
+</script>
+
+</body>
+</html>
