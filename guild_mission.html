@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Nhiệm vụ Bang</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .m-item{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .m-left{display:flex;align-items:center;gap:10px;}
+  .m-icon{font-size:22px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📜 Nhiệm vụ Bang</h2>
+
+  <div class="box" id="guildInfo">Đang tải...</div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:8px;">Nhiệm vụ hôm nay</div>
+    <div id="missionList"></div>
+    <p id="msg" class="muted" style="margin-top:8px;"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp, increment
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const guildInfo = document.getElementById("guildInfo");
+  const missionList = document.getElementById("missionList");
+  const msgEl = document.getElementById("msg");
+
+  let uid=null, me=null, guildId=null, guild=null;
+  let dailyRef=null, dailyData=null;
+
+  const MISSIONS = [
+    { id:"checkin", icon:"✅", title:"Điểm danh", desc:"Điểm danh nhận xu", points:30, pool:20, reward:10 },
+    { id:"chat", icon:"💬", title:"Chat bang", desc:"Gửi 1 tin nhắn trong chat bang", points:20, pool:10, reward:5 },
+    { id:"match", icon:"💗", title:"Có match mới", desc:"Match ít nhất 1 người", points:40, pool:25, reward:10 },
+    { id:"shop", icon:"🛒", title:"Mua đồ", desc:"Mua 1 món trong Shop", points:25, pool:15, reward:5 }
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+
+    await ensureCoins();
+
+    const meSnap = await getDoc(doc(db,"users",uid));
+    me = meSnap.exists()?meSnap.data():{};
+    guildId = me.guildId;
+
+    if(!guildId){
+      alert("Bạn chưa vào bang nào.");
+      location.href="guild.html";
+      return;
+    }
+
+    const gSnap = await getDoc(doc(db,"guilds",guildId));
+    guild = gSnap.exists()?gSnap.data():{};
+    renderGuildInfo();
+
+    // load daily mission of user
+    const today = getTodayKey();
+    dailyRef = doc(db,"guildMissions",guildId,"daily",uid);
+    const dSnap = await getDoc(dailyRef);
+
+    if(!dSnap.exists() || dSnap.data().date !== today){
+      dailyData = {
+        date: today,
+        done: { checkin:false, chat:false, match:false, shop:false },
+        pointsToday: 0
+      };
+      await setDoc(dailyRef, dailyData);
+    }else{
+      dailyData = dSnap.data();
+    }
+
+    renderMissions();
+  });
+
+  function renderGuildInfo(){
+    const needExp = needExpForNext(guild.level||1);
+    guildInfo.innerHTML = `
+      <div style="font-weight:900;font-size:18px;">
+        ${(guild.badge||"🏰")} ${guild.name||"Bang hội"}
+      </div>
+      <div class="muted">
+        Level: <b>${guild.level||1}</b> • EXP: <b>${guild.exp||0}</b> / ${needExp}<br>
+        Quỹ bang: <b>${guild.coinsPool||0}</b> xu
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <a class="btn light" href="guild_chat.html">💬 Chat bang</a>
+        <a class="btn light" href="guild.html">🏰 Về Bang</a>
+      </div>
+    `;
+  }
+
+  function renderMissions(){
+    missionList.innerHTML = "";
+
+    MISSIONS.forEach(m=>{
+      const done = !!dailyData.done?.[m.id];
+
+      const row = document.createElement("div");
+      row.className="row m-item fade-in";
+      row.innerHTML=`
+        <div class="m-left">
+          <div class="m-icon">${m.icon}</div>
+          <div>
+            <div style="font-weight:900">${m.title}</div>
+            <div class="muted">${m.desc}</div>
+            <div class="muted">+${m.points} EXP bang • +${m.pool} quỹ • thưởng ${m.reward} xu</div>
+          </div>
+        </div>
+        <button class="btn ${done?'light':''}" style="width:auto;min-width:110px"
+          ${done?'disabled':''}>
+          ${done?"Đã xong":"Hoàn thành"}
+        </button>
+      `;
+
+      row.querySelector("button").onclick = ()=>completeMission(m);
+      missionList.appendChild(row);
+    });
+
+    msgEl.innerText = `Điểm bang hôm nay: ${dailyData.pointsToday||0}`;
+  }
+
+  async function completeMission(m){
+    if(dailyData.done[m.id]) return;
+
+    // đánh dấu done
+    dailyData.done[m.id] = true;
+    dailyData.pointsToday = (dailyData.pointsToday||0) + m.points;
+
+    await setDoc(dailyRef, dailyData, {merge:true});
+
+    // cộng cho bang: exp + quỹ
+    const gRef = doc(db,"guilds",guildId);
+    await updateDoc(gRef,{
+      exp: increment(m.points),
+      coinsPool: increment(m.pool),
+      updatedAt: serverTimestamp()
+    });
+
+    // thưởng xu cá nhân
+    await addCoins(m.reward);
+
+    // reload guild data để check level up
+    const gSnap = await getDoc(gRef);
+    guild = gSnap.data()||guild;
+    await tryLevelUp(gRef);
+
+    renderGuildInfo();
+    renderMissions();
+    alert(`✅ Hoàn thành: ${m.title}!`);
+  }
+
+  async function tryLevelUp(gRef){
+    let level = guild.level||1;
+    let exp = guild.exp||0;
+
+    let need = needExpForNext(level);
+    let leveled = false;
+
+    while(exp >= need){
+      exp -= need;
+      level += 1;
+      need = needExpForNext(level);
+      leveled = true;
+    }
+
+    if(leveled){
+      guild.level = level;
+      guild.exp = exp;
+      await updateDoc(gRef,{ level, exp });
+      alert(`🎉 Bang lên Level ${level}!`);
+    }
+  }
+
+  function needExpForNext(level){
+    // công thức MVP: level càng cao càng nhiều exp
+    return 100 + (level-1)*80;
+  }
+
+  function getTodayKey(){
+    const d=new Date();
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("guild");
+</script>
+
+</body>
+</html>
