@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Admin Reports</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>🛡️ Admin — Reports</h2>
+  <div id="list"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có report nào.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const listEl=document.getElementById("list");
+  const emptyEl=document.getElementById("empty");
+
+  // UID admin của bạn (thay bằng UID thật của bạn)
+  const ADMIN_UIDS = [
+    "PUT_YOUR_UID_HERE"
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+
+    if(!ADMIN_UIDS.includes(user.uid)){
+      alert("Bạn không có quyền admin.");
+      location.href="index.html";
+      return;
+    }
+
+    const q=query(collection(db,"reports"), orderBy("createdAt","desc"));
+
+    onSnapshot(q,(snap)=>{
+      listEl.innerHTML="";
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
+
+      snap.forEach(d=>{
+        const r=d.data();
+        const id=d.id;
+
+        const row=document.createElement("div");
+        row.className="box fade-in";
+        row.style.marginBottom="8px";
+
+        const timeStr=r.createdAt?.toDate
+          ? r.createdAt.toDate().toLocaleString()
+          : "";
+
+        row.innerHTML=`
+          <div style="font-weight:900;font-size:16px;">
+            📌 Report: ${r.reason}
+          </div>
+          <div class="muted" style="margin-top:4px;">
+            Reporter: ${r.reporterUid}<br>
+            Target: ${r.targetUid}<br>
+            Ghi chú: ${r.note||"(không có)"}<br>
+            Thời gian: ${timeStr}<br>
+            Trạng thái: <b>${r.status||"new"}</b>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn light" data-act="review">Đang xử lý</button>
+            <button class="btn" data-act="done">Xong</button>
+          </div>
+        `;
+
+        row.querySelectorAll("button").forEach(btn=>{
+          btn.onclick=()=>updateStatus(id, btn.dataset.act);
+        });
+
+        listEl.appendChild(row);
+      });
+    });
+  });
+
+  async function updateStatus(id, st){
+    await updateDoc(doc(db,"reports",id),{status:st});
+  }
+</script>
+
+</body>
+</html>
