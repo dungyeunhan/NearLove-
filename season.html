@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Season Ranking</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .row{align-items:center;}
+  .rank{width:26px;font-weight:900;color:#ffd1e6;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🗓️ Season Ranking</h2>
+
+  <div class="box" id="seasonInfo">Đang tải...</div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Top mùa này</div>
+    <div id="list"></div>
+    <p id="empty" class="muted" style="display:none;">Chưa có ai có điểm.</p>
+  </div>
+
+  <a class="btn light" style="margin-top:10px" href="season_pass.html">🎫 Season Pass</a>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="season.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { getCurrentSeason } from "./season.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, limit, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const seasonInfo=document.getElementById("seasonInfo");
+  const listEl=document.getElementById("list");
+  const emptyEl=document.getElementById("empty");
+
+  let seasonId=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+
+    const season=await getCurrentSeason();
+    seasonId=season.seasonId;
+
+    seasonInfo.innerHTML=`
+      <div style="font-weight:900;font-size:18px;">${season.name}</div>
+      <div class="muted">Từ ${season.startAt.toDate?season.startAt.toDate().toLocaleDateString():new Date(season.startAt).toLocaleDateString()}
+      đến ${season.endAt.toDate?season.endAt.toDate().toLocaleDateString():new Date(season.endAt).toLocaleDateString()}</div>
+      <div class="muted">${season.note||""}</div>
+    `;
+
+    const q=query(
+      collection(db,"seasonPoints",seasonId,"users"),
+      orderBy("points","desc"),
+      limit(100)
+    );
+
+    onSnapshot(q,(snap)=>{
+      listEl.innerHTML="";
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
+
+      let i=0;
+      snap.forEach(d=>{
+        i++;
+        const u=d.data();
+        const row=document.createElement("div");
+        row.className="row fade-in";
+        row.innerHTML=`
+          <div class="rank">${i}</div>
+          <img class="avatar" src="${u.avatar||'default.png'}" style="width:44px;height:44px;">
+          <div style="flex:1">
+            <div style="font-weight:900">${u.name||u.uid}</div>
+            <div class="muted" style="font-size:12px;">
+              VIP${u.vipTier||0}
+            </div>
+          </div>
+          <div class="tag pink" style="font-weight:900">${u.points||0} pts</div>
+        `;
+        listEl.appendChild(row);
+      });
+    });
+  });
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("season");
+</script>
+
+</body>
+</html>
