@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Thời trang</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .look{display:flex;gap:10px;align-items:center;}
+  .slot{flex:1;background:rgba(255,255,255,0.05);padding:8px;border-radius:12px;text-align:center;}
+  .slot .icon{font-size:34px}
+  .shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:700px){.shop-grid{grid-template-columns:repeat(2,1fr);}}
+  .rarity-common{border:1px solid rgba(255,255,255,0.08);}
+  .rarity-rare{border:1px solid rgba(126,224,129,0.6);}
+  .rarity-epic{border:1px solid rgba(179,136,255,0.7);}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>👗 Thời trang NearLove</h2>
+
+  <!-- Outfit đang mặc -->
+  <div class="box">
+    <div style="font-weight:900;margin-bottom:6px;">Outfit hiện tại</div>
+    <div class="look" id="lookBox"></div>
+    <div class="muted" style="margin-top:6px;">Style Points: <b id="stylePts">0</b></div>
+    <button class="btn light" style="margin-top:8px" onclick="saveWearing()">💾 Lưu outfit</button>
+  </div>
+
+  <!-- Tủ đồ -->
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:6px;">Tủ đồ của bạn</div>
+    <div id="wardrobeList"></div>
+    <p id="emptyWardrobe" class="muted" style="display:none;">Chưa có đồ nào. Mua hoặc quay gacha nhé.</p>
+  </div>
+
+  <!-- Shop -->
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;margin-bottom:8px;">Shop thời trang</div>
+    <div id="shop" class="shop-grid"></div>
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const lookBox=document.getElementById("lookBox");
+  const stylePtsEl=document.getElementById("stylePts");
+  const wardrobeList=document.getElementById("wardrobeList");
+  const emptyWardrobe=document.getElementById("emptyWardrobe");
+  const shopEl=document.getElementById("shop");
+  const msgEl=document.getElementById("msg");
+
+  let uid=null;
+  let wardrobe={ items:[], wearing:{hair:null,top:null,bottom:null,accessory:null}, stylePoints:0 };
+
+  // đồ shop MVP
+  const FASHION_SHOP=[
+    {itemId:"hair_pink", name:"Tóc hồng", icon:"💇‍♀️", type:"hair", rarity:"common", cost:60, pts:5},
+    {itemId:"hair_blue", name:"Tóc xanh", icon:"🦋", type:"hair", rarity:"rare", cost:120, pts:10},
+
+    {itemId:"top_hoodie", name:"Hoodie đôi", icon:"🧥", type:"top", rarity:"common", cost:80, pts:6},
+    {itemId:"top_vip", name:"Áo VIP", icon:"👕", type:"top", rarity:"epic", cost:220, pts:18},
+
+    {itemId:"bottom_jeans", name:"Jeans đen", icon:"👖", type:"bottom", rarity:"common", cost:70, pts:5},
+    {itemId:"bottom_skirt", name:"Váy tím", icon:"👗", type:"bottom", rarity:"rare", cost:140, pts:11},
+
+    {itemId:"acc_flower", name:"Hoa cài tóc", icon:"🌸", type:"accessory", rarity:"common", cost:40, pts:3},
+    {itemId:"acc_ring", name:"Nhẫn đôi", icon:"💍", type:"accessory", rarity:"epic", cost:180, pts:15},
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){alert("Bạn chưa đăng nhập!");location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+    await loadWardrobe();
+    renderAll();
+  });
+
+  async function loadWardrobe(){
+    const ref=doc(db,"wardrobe",uid);
+    const snap=await getDoc(ref);
+    if(snap.exists()) wardrobe = {...wardrobe, ...snap.data()};
+    else await setDoc(ref, wardrobe);
+  }
+
+  function renderAll(){
+    renderLook();
+    renderWardrobe();
+    renderShop();
+  }
+
+  function renderLook(){
+    const w=wardrobe.wearing||{};
+    const getItem=(id)=>wardrobe.items.find(x=>x.itemId===id);
+
+    const slots=[
+      {key:"hair", label:"Tóc"},
+      {key:"top", label:"Áo"},
+      {key:"bottom", label:"Quần/Váy"},
+      {key:"accessory", label:"Phụ kiện"},
+    ];
+
+    lookBox.innerHTML = slots.map(s=>{
+      const it=getItem(w[s.key]);
+      return `
+        <div class="slot">
+          <div class="muted">${s.label}</div>
+          <div class="icon">${it?it.icon:"❔"}</div>
+          <div style="font-weight:900;font-size:13px;">${it?it.name:"Chưa mặc"}</div>
+        </div>
+      `;
+    }).join("");
+
+    stylePtsEl.innerText = wardrobe.stylePoints||0;
+  }
+
+  function renderWardrobe(){
+    wardrobeList.innerHTML="";
+    if(!wardrobe.items || wardrobe.items.length===0){
+      emptyWardrobe.style.display="block";
+      return;
+    }
+    emptyWardrobe.style.display="none";
+
+    wardrobe.items.forEach(it=>{
+      const row=document.createElement("div");
+      row.className=`row fade-in rarity-${it.rarity||"common"}`;
+      row.innerHTML=`
+        <div style="font-size:26px">${it.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:900">${it.name}</div>
+          <div class="muted">Loại: ${it.type} • ${it.rarity||"common"}</div>
+        </div>
+        <button class="btn light" style="width:auto" onclick="wearItem('${it.itemId}')">Mặc</button>
+      `;
+      wardrobeList.appendChild(row);
+    });
+  }
+
+  function renderShop(){
+    shopEl.innerHTML="";
+    FASHION_SHOP.forEach(it=>{
+      const owned = wardrobe.items.some(x=>x.itemId===it.itemId);
+      const card=document.createElement("div");
+      card.className=`card fade-in rarity-${it.rarity}`;
+      card.innerHTML=`
+        <div style="font-size:34px;text-align:center">${it.icon}</div>
+        <div style="font-weight:900;text-align:center">${it.name}</div>
+        <div class="muted" style="text-align:center">${it.type} • ${it.rarity}</div>
+        <div class="tag" style="text-align:center">Giá: ${it.cost} xu</div>
+        <button class="btn ${owned?'light':''}" ${owned?'disabled':''}
+          style="margin-top:6px" onclick="buyItem('${it.itemId}')">
+          ${owned?"Đã có":"Mua"}
+        </button>
+      `;
+      shopEl.appendChild(card);
+    });
+  }
+
+  // mua đồ
+  window.buyItem = async (itemId)=>{
+    const it=FASHION_SHOP.find(x=>x.itemId===itemId);
+    if(!it) return;
+    if(wardrobe.items.some(x=>x.itemId===itemId)){
+      alert("Bạn đã có món này rồi."); return;
+    }
+
+    const res=await spendCoins(it.cost);
+    if(!res.ok){ alert("Không đủ xu!"); return; }
+
+    wardrobe.items.push({
+      itemId: it.itemId, name: it.name, icon: it.icon,
+      type: it.type, rarity: it.rarity, pts: it.pts
+    });
+
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Đã mua ${it.name}!`;
+    renderAll();
+    saveWardrobe();
+  };
+
+  // mặc đồ
+  window.wearItem = (itemId)=>{
+    const it=wardrobe.items.find(x=>x.itemId===itemId);
+    if(!it) return;
+    wardrobe.wearing[it.type]=itemId;
+
+    // tính style points
+    let pts=0;
+    Object.values(wardrobe.wearing).forEach(id=>{
+      const i=wardrobe.items.find(x=>x.itemId===id);
+      if(i) pts += (i.pts||0);
+    });
+    wardrobe.stylePoints=pts;
+
+    renderLook();
+  };
+
+  window.saveWearing = async ()=>{
+    await saveWardrobe();
+    alert("💾 Đã lưu outfit!");
+  };
+
+  async function saveWardrobe(){
+    await setDoc(doc(db,"wardrobe",uid),{
+      items: wardrobe.items,
+      wearing: wardrobe.wearing,
+      stylePoints: wardrobe.stylePoints,
+      updatedAt: serverTimestamp()
+    },{merge:true});
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("fashion");
+</script>
+
+</body>
+</html>
