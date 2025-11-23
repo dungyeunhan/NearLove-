@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Quà bí mật</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .big{font-size:64px;text-align:center;margin-top:6px;}
+  .result{display:none;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🎁 Quà bí mật (Gacha)</h2>
+
+  <div class="box">
+    <div class="muted">Quay 1 lần tốn <b>80 xu</b>. Có thể ra đồ hiếm/siêu hiếm.</div>
+    <button class="btn" id="rollBtn" onclick="roll()">🎲 Quay ngay</button>
+    <div class="big" id="spin">❔</div>
+
+    <div id="result" class="result">
+      <hr>
+      <div style="font-weight:900;text-align:center;">Bạn nhận được:</div>
+      <div class="big" id="resIcon"></div>
+      <div style="font-weight:900;text-align:center;font-size:18px;" id="resName"></div>
+      <div class="muted" style="text-align:center;" id="resRarity"></div>
+      <button class="btn light" style="margin-top:8px" onclick="goWardrobe()">👗 Xem tủ đồ</button>
+    </div>
+
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, spendCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, addDoc, collection, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const rollBtn=document.getElementById("rollBtn");
+  const spinEl=document.getElementById("spin");
+  const resultEl=document.getElementById("result");
+  const resIcon=document.getElementById("resIcon");
+  const resName=document.getElementById("resName");
+  const resRarity=document.getElementById("resRarity");
+  const msgEl=document.getElementById("msg");
+
+  let uid=null;
+  let wardrobe=null;
+  const COST=80;
+
+  // pool gacha (có thể mở rộng sau)
+  const POOL=[
+    // common 70%
+    {itemId:"acc_star", name:"Kẹp sao", icon:"⭐", type:"accessory", rarity:"common", pts:3, w:70},
+    {itemId:"top_white", name:"Áo trắng basic", icon:"👔", type:"top", rarity:"common", pts:4, w:70},
+    {itemId:"bottom_short", name:"Quần short", icon:"🩳", type:"bottom", rarity:"common", pts:4, w:70},
+
+    // rare 25%
+    {itemId:"hair_silver", name:"Tóc bạc", icon:"❄️", type:"hair", rarity:"rare", pts:10, w:25},
+    {itemId:"top_bomber", name:"Bomber jacket", icon:"🧥", type:"top", rarity:"rare", pts:11, w:25},
+
+    // epic 5%
+    {itemId:"acc_crown", name:"Vương miện", icon:"👑", type:"accessory", rarity:"epic", pts:18, w:5},
+    {itemId:"top_royal", name:"Áo hoàng gia", icon:"🥻", type:"top", rarity:"epic", pts:20, w:5},
+  ];
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){alert("Bạn chưa đăng nhập!");location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+    await loadWardrobe();
+  });
+
+  async function loadWardrobe(){
+    const ref=doc(db,"wardrobe",uid);
+    const snap=await getDoc(ref);
+    wardrobe=snap.exists()?snap.data():{items:[],wearing:{},stylePoints:0};
+    if(!snap.exists()) await setDoc(ref, wardrobe);
+  }
+
+  window.roll = async ()=>{
+    const res=await spendCoins(COST);
+    if(!res.ok){ alert("Không đủ xu!"); return; }
+
+    rollBtn.disabled=true;
+    resultEl.style.display="none";
+    msgEl.innerText="Đang quay...";
+
+    // giả lập quay
+    const icons=["🎁","💝","✨","🌸","💎","👑"];
+    let t=0;
+    const anim=setInterval(()=>{
+      spinEl.innerText = icons[Math.floor(Math.random()*icons.length)];
+      t+=1;
+      if(t>12){
+        clearInterval(anim);
+        const item=pickItem();
+        await grantItem(item);
+        showResult(item);
+        rollBtn.disabled=false;
+        msgEl.innerText="";
+      }
+    },120);
+  };
+
+  function pickItem(){
+    const sum = POOL.reduce((a,b)=>a+b.w,0);
+    let r=Math.random()*sum;
+    for(const it of POOL){
+      r-=it.w;
+      if(r<=0) return it;
+    }
+    return POOL[0];
+  }
+
+  async function grantItem(it){
+    const owned = wardrobe.items.some(x=>x.itemId===it.itemId);
+    if(!owned){
+      wardrobe.items.push({
+        itemId: it.itemId, name: it.name, icon: it.icon,
+        type: it.type, rarity: it.rarity, pts: it.pts
+      });
+      await setDoc(doc(db,"wardrobe",uid),{
+        items: wardrobe.items
+      },{merge:true});
+    }
+
+    await addDoc(collection(db,"gachaLogs",uid,"items"),{
+      itemId: it.itemId, name: it.name, icon: it.icon, rarity: it.rarity,
+      time: serverTimestamp()
+    });
+  }
+
+  function showResult(it){
+    resIcon.innerText=it.icon;
+    resName.innerText=it.name + (wardrobe.items.filter(x=>x.itemId===it.itemId).length>1 ? " (đã có)" : "");
+    resRarity.innerText=`Độ hiếm: ${it.rarity.toUpperCase()}`;
+    resultEl.style.display="block";
+    spinEl.innerText="❔";
+  }
+
+  window.goWardrobe = ()=> location.href="fashion.html";
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("gacha");
+</script>
+
+</body>
+</html>
