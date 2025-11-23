@@ -1,268 +1,187 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<title>NearLove - Đám cưới</title>
-
+<meta charset="UTF-8">
+<title>NearLove - Hôn lễ</title>
+<link rel="stylesheet" href="theme.css">
 <style>
-  body{font-family:Arial;background:#0f1115;color:white;padding:16px;padding-bottom:80px;}
-  h2{text-align:center;color:#ffd1e6;margin:8px 0 14px;}
-  .box{
-    max-width:900px;margin:0 auto 12px;background:#151824;
-    padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);
-  }
-  .sub{font-size:14px;opacity:.85;line-height:1.5}
-  select{
-    width:100%;padding:12px;border-radius:10px;border:none;outline:none;
-    background:rgba(255,255,255,0.08);color:white;font-size:15px;margin-top:8px;
-  }
-  .ring-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;}
-  .ring{
-    background:rgba(255,255,255,0.06);padding:10px;border-radius:12px;
-    border:1px solid transparent;cursor:pointer;display:flex;gap:8px;align-items:center;
-  }
-  .ring.active{border:1px solid #ff8ac9;background:rgba(255,61,127,0.18);}
-  .ring .icon{font-size:26px;}
-  .btn{
-    width:100%;padding:12px;border:none;border-radius:12px;
-    background:linear-gradient(135deg,#ff3d7f,#ff8ac9);color:white;font-weight:bold;
-    font-size:16px;margin-top:10px;cursor:pointer;
-  }
-  .btn.light{background:rgba(255,255,255,0.1);}
-  #msg{margin-top:8px;font-size:14px}
-  .status{
-    margin-top:8px;background:rgba(0,0,0,0.35);padding:10px;border-radius:10px;
-    font-size:14px;
-  }
+  .req-card{display:flex;flex-direction:column;gap:6px;}
 </style>
 </head>
 <body>
 
-<h2>💍 Wedding NearLove</h2>
+<div class="container">
+  <h2>💍 Hôn lễ NearLove</h2>
 
-<!-- Trạng thái -->
-<div class="box">
-  <div class="sub">Trạng thái hôn nhân:</div>
-  <div class="status" id="marriageStatus">Đang tải...</div>
+  <div class="box" id="myStatus">Đang tải...</div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Lời cầu hôn gửi đến bạn</div>
+    <div id="reqList" style="margin-top:8px;"></div>
+    <p id="emptyReq" class="muted" style="display:none;">Chưa có lời cầu hôn nào.</p>
+  </div>
 </div>
 
-<!-- Chọn người đã match -->
-<div class="box">
-  <div class="sub">1) Chọn người bạn muốn cưới (chỉ hiện người đã match):</div>
-  <select id="matchSelect">
-    <option value="">-- Chọn người đã match --</option>
-  </select>
-</div>
-
-<!-- Chọn nhẫn -->
-<div class="box">
-  <div class="sub">2) Chọn nhẫn từ kho đồ của bạn:</div>
-  <div class="ring-list" id="ringList"></div>
-</div>
-
-<!-- Nút cưới -->
-<div class="box">
-  <button class="btn" onclick="createWedding()">💝 Tạo lễ cưới</button>
-  <button class="btn light" onclick="cancelWedding()">💔 Huỷ hôn / Ly hôn (demo)</button>
-  <p id="msg"></p>
-</div>
-
-<!-- Firebase -->
 <script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
   import {
-    collection, query, where, getDocs,
-    doc, getDoc, setDoc, updateDoc, deleteDoc,
-    serverTimestamp
+    collection, query, where, onSnapshot, addDoc,
+    doc, getDoc, setDoc, updateDoc, serverTimestamp, deleteDoc
   } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-  const matchSelect = document.getElementById("matchSelect");
-  const ringListEl = document.getElementById("ringList");
-  const msgEl = document.getElementById("msg");
-  const statusEl = document.getElementById("marriageStatus");
+  const myStatus=document.getElementById("myStatus");
+  const reqList=document.getElementById("reqList");
+  const emptyReq=document.getElementById("emptyReq");
 
-  let myUid=null;
-  let myProfile=null;
-  let rings=[];
-  let selectedRing=null;
+  let uid=null, me=null;
 
   onAuthStateChanged(auth, async (user)=>{
     if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
-    myUid = user.uid;
+    uid=user.uid;
 
-    // load hồ sơ mình
-    const meSnap = await getDoc(doc(db,"users",myUid));
-    myProfile = meSnap.exists() ? meSnap.data() : {};
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.exists()?meSnap.data():{};
+    renderMyStatus();
 
-    renderMarriageStatus();
+    // nghe lời cầu hôn tới mình
+    const rq = query(
+      collection(db,"weddingRequests"),
+      where("toUid","==",uid),
+      where("status","==","pending")
+    );
 
-    // load danh sách match của mình
-    await loadMatches();
+    onSnapshot(rq,(snap)=>{
+      reqList.innerHTML="";
+      if(snap.empty){ emptyReq.style.display="block"; return; }
+      emptyReq.style.display="none";
 
-    // load nhẫn trong kho đồ
-    await loadRings();
+      snap.forEach(d=>{
+        const r=d.data(); const id=d.id;
+        const card=document.createElement("div");
+        card.className="card req-card fade-in";
+        card.innerHTML=`
+          <div style="display:flex;gap:10px;align-items:center;">
+            <img class="avatar" src="${r.fromAvatar||'default.png'}" style="width:52px;height:52px;">
+            <div style="flex:1;">
+              <div style="font-weight:900;font-size:16px;">${r.fromName||"Ai đó"}</div>
+              <div class="muted">muốn kết hôn với bạn 💗</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="acceptReq('${id}')">✅ Đồng ý</button>
+            <button class="btn light" onclick="rejectReq('${id}')">❌ Từ chối</button>
+          </div>
+        `;
+        reqList.appendChild(card);
+      });
+    });
   });
 
-  function renderMarriageStatus(){
-    if(myProfile?.marriedTo){
-      statusEl.innerHTML = `💞 Bạn đã kết hôn với UID: <b>${myProfile.marriedTo}</b><br>
-      Wedding ID: ${myProfile.weddingId || "?"}`;
-    }else{
-      statusEl.innerText = "Chưa kết hôn.";
-    }
-  }
-
-  async function loadMatches(){
-    matchSelect.innerHTML = `<option value="">-- Chọn người đã match --</option>`;
-    const q = query(collection(db,"matches"), where("users","array-contains",myUid));
-    const snap = await getDocs(q);
-
-    snap.forEach(d=>{
-      const data = d.data();
-      const otherUid = data.users.find(u=>u!==myUid);
-
-      const opt = document.createElement("option");
-      opt.value = otherUid;
-      opt.textContent = otherUid; // MVP hiển thị uid (sau sẽ hiện tên)
-      matchSelect.appendChild(opt);
-    });
-  }
-
-  async function loadRings(){
-    ringListEl.innerHTML = "";
-    const invSnap = await getDoc(doc(db,"inventories",myUid));
-    const items = invSnap.exists() ? (invSnap.data().items || []) : [];
-
-    rings = items.filter(i=> (i.type||"").toLowerCase().includes("wedding") || (i.id||"").includes("ring"));
-
-    if(rings.length===0){
-      ringListEl.innerHTML = `<div class="sub">Bạn chưa có nhẫn. Vào Shop mua nhẫn trước nhé 💍</div>`;
-      return;
-    }
-
-    rings.forEach((r, idx)=>{
-      const div = document.createElement("div");
-      div.className="ring";
-      div.innerHTML = `
-        <div class="icon">${r.icon||"💍"}</div>
-        <div>
-          <b>${r.name}</b><br>
-          <span class="sub">${r.price || 0} xu</span>
+  function renderMyStatus(){
+    if(me.marriedTo && me.weddingId){
+      myStatus.innerHTML=`
+        <div style="font-weight:900;font-size:18px;">Bạn đã kết hôn 💍</div>
+        <div class="muted">WeddingID: ${me.weddingId}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <a class="btn blue" href="wedding_room.html?w=${me.weddingId}">🏰 Vào phòng cưới</a>
+          <button class="btn light" onclick="divorce()">💔 Ly hôn (demo)</button>
         </div>
       `;
-      div.onclick=()=>{
-        document.querySelectorAll(".ring").forEach(x=>x.classList.remove("active"));
-        div.classList.add("active");
-        selectedRing = r;
-      };
-      ringListEl.appendChild(div);
-
-      if(idx===0){
-        div.classList.add("active");
-        selectedRing = r;
-      }
-    });
+    }else{
+      myStatus.innerHTML=`
+        <div style="font-weight:900;font-size:18px;">Bạn chưa kết hôn</div>
+        <div class="muted">Hãy vào hồ sơ người bạn thích để cầu hôn nhé.</div>
+      `;
+    }
   }
 
-  // Tạo lễ cưới
-  window.createWedding = async ()=>{
-    msgEl.innerText="";
-    const partnerUid = matchSelect.value;
-
-    if(!partnerUid){
-      msgEl.style.color="red";
-      msgEl.innerText="Bạn chưa chọn người để cưới.";
-      return;
-    }
-    if(!selectedRing){
-      msgEl.style.color="red";
-      msgEl.innerText="Bạn chưa chọn nhẫn.";
-      return;
+  // ===== ACCEPT =====
+  window.acceptReq = async (reqId)=>{
+    if(me.marriedTo){
+      alert("Bạn đã kết hôn rồi."); return;
     }
 
-    // chặn nếu mình đã kết hôn
-    if(myProfile?.marriedTo){
-      msgEl.style.color="red";
-      msgEl.innerText="Bạn đang có hôn nhân rồi. Huỷ hôn trước khi cưới mới.";
+    const rSnap=await getDoc(doc(db,"weddingRequests",reqId));
+    if(!rSnap.exists()) return;
+    const r=rSnap.data();
+
+    const fromUid=r.fromUid;
+    const fromSnap=await getDoc(doc(db,"users",fromUid));
+    const from=fromSnap.exists()?fromSnap.data():{};
+
+    if(from.marriedTo){
+      alert("Người kia đã kết hôn với người khác."); 
+      await updateDoc(doc(db,"weddingRequests",reqId),{status:"rejected"});
       return;
     }
 
-    // kiểm tra đối phương có đang kết hôn không
-    const pSnap = await getDoc(doc(db,"users",partnerUid));
-    const pData = pSnap.exists()?pSnap.data():{};
-    if(pData?.marriedTo){
-      msgEl.style.color="red";
-      msgEl.innerText="Người này đã kết hôn với người khác.";
-      return;
-    }
+    // tạo weddingId
+    const weddingId = `${fromUid}_${uid}`;
 
-    // weddingId cố định theo cặp để tránh trùng
-    const weddingId = `${myUid}_${partnerUid}`;
-
-    // tạo wedding
-    await setDoc(doc(db,"weddings", weddingId),{
-      users:[myUid, partnerUid],
-      ringId: selectedRing.id,
-      ringName: selectedRing.name,
-      ringIcon: selectedRing.icon,
-      createdAt: serverTimestamp()
+    // tạo wedding document
+    await setDoc(doc(db,"weddings",weddingId),{
+      aUid: fromUid, bUid: uid,
+      aName: from.name||"A", bName: me.name||"B",
+      aAvatar: from.avatar||"default.png",
+      bAvatar: me.avatar||"default.png",
+      createdAt: serverTimestamp(),
+      giftsTotal: 0
     });
 
-    // update cả 2 user
-    await updateDoc(doc(db,"users", myUid),{
-      marriedTo: partnerUid,
+    // update 2 user
+    await updateDoc(doc(db,"users",uid),{
+      marriedTo: fromUid,
       weddingId
     });
-    await updateDoc(doc(db,"users", partnerUid),{
-      marriedTo: myUid,
+    await updateDoc(doc(db,"users",fromUid),{
+      marriedTo: uid,
       weddingId
     });
 
-    msgEl.style.color="lightgreen";
-    msgEl.innerText="🎉 Tạo lễ cưới thành công! Chúc mừng 2 bạn 💕";
+    // update req
+    await updateDoc(doc(db,"weddingRequests",reqId),{status:"accepted"});
 
-    // reload trạng thái
-    myProfile.marriedTo = partnerUid;
-    myProfile.weddingId = weddingId;
-    renderMarriageStatus();
+    alert("🎉 Kết hôn thành công! Vào phòng cưới thôi!");
+    location.reload();
   };
 
-  // Huỷ hôn (demo MVP)
-  window.cancelWedding = async ()=>{
-    if(!myProfile?.marriedTo){
-      msgEl.style.color="red";
-      msgEl.innerText="Bạn chưa kết hôn.";
-      return;
-    }
-
-    const partnerUid = myProfile.marriedTo;
-    const weddingId = myProfile.weddingId;
-
-    // xoá wedding doc
-    if(weddingId){
-      await deleteDoc(doc(db,"weddings", weddingId));
-    }
-
-    // xoá trạng thái hôn nhân của 2 bên
-    await updateDoc(doc(db,"users", myUid),{
-      marriedTo: null,
-      weddingId: null
-    });
-    await updateDoc(doc(db,"users", partnerUid),{
-      marriedTo: null,
-      weddingId: null
-    });
-
-    msgEl.style.color="#ffd1e6";
-    msgEl.innerText="💔 Đã huỷ hôn (demo).";
-
-    myProfile.marriedTo=null;
-    myProfile.weddingId=null;
-    renderMarriageStatus();
+  // ===== REJECT =====
+  window.rejectReq = async (reqId)=>{
+    await updateDoc(doc(db,"weddingRequests",reqId),{status:"rejected"});
+    alert("Bạn đã từ chối lời cầu hôn.");
   };
+
+  // ===== DIVORCE (demo) =====
+  window.divorce = async ()=>{
+    if(!confirm("Ly hôn demo sẽ xoá cưới. Bạn chắc chưa?")) return;
+
+    const otherUid=me.marriedTo;
+    const weddingId=me.weddingId;
+
+    // xoá wedding doc + gifts (MVP chỉ xoá wedding doc)
+    await deleteDoc(doc(db,"weddings",weddingId)).catch(()=>{});
+
+    await updateDoc(doc(db,"users",uid),{marriedTo:null,weddingId:null});
+    if(otherUid){
+      await updateDoc(doc(db,"users",otherUid),{marriedTo:null,weddingId:null}).catch(()=>{});
+    }
+
+    alert("💔 Đã ly hôn.");
+    location.reload();
+  };
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("home");
 </script>
 
 </body>
