@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Pet Race</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .lane{background:#151824;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:8px;margin-top:8px;}
+  .runner{font-size:30px;transition:transform .15s linear;}
+  .track{height:34px;position:relative;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;}
+  .runner{position:absolute;left:0;top:0;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🐾 Pet Race</h2>
+
+  <div class="box" id="petInfo">Đang tải...</div>
+
+  <div class="box" style="margin-top:10px;">
+    <div style="font-weight:900;">Đường đua</div>
+
+    <div class="lane">
+      Bạn: <b id="meName">Me</b>
+      <div class="track"><div id="meRun" class="runner">🐾</div></div>
+    </div>
+    <div class="lane">
+      Đối thủ: <b id="botName">Bot</b>
+      <div class="track"><div id="botRun" class="runner">🐾</div></div>
+    </div>
+
+    <button class="btn" id="startBtn" onclick="startRace()">🏁 Đua ngay</button>
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { ensureCoins, addCoins } from "./coins.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const petInfo=document.getElementById("petInfo");
+  const meRun=document.getElementById("meRun");
+  const botRun=document.getElementById("botRun");
+  const msg=document.getElementById("msg");
+  const startBtn=document.getElementById("startBtn");
+
+  let uid=null, me=null, pet=null, racing=false;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){alert("Bạn chưa đăng nhập!");location.href="login.html";return;}
+    uid=user.uid;
+    await ensureCoins();
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.exists()?meSnap.data():{};
+    pet=me.activePet;
+
+    if(!pet){
+      petInfo.innerHTML="Bạn chưa có pet. Vào Pet để nhận pet nhé.";
+      startBtn.disabled=true;
+      return;
+    }
+
+    petInfo.innerHTML=`
+      Pet của bạn: <b>${pet.icon||"🐾"} ${pet.name}</b> • Lv.${pet.level||1} • EXP ${pet.exp||0}
+      <div class="muted">Đua thắng nhận xu + exp pet.</div>
+    `;
+    meRun.innerText=pet.icon||"🐾";
+  });
+
+  window.startRace = async ()=>{
+    if(racing) return;
+    racing=true; startBtn.disabled=true;
+    msg.innerText="Đang đua...";
+
+    let mePos=0, botPos=0;
+    const finish=260; // px
+    const meSpeedBase= 2.2 + (pet.level||1)*0.15;
+    const botSpeedBase= 2.1 + Math.random()*0.4;
+
+    const timer=setInterval(async ()=>{
+      mePos += meSpeedBase + Math.random()*1.2;
+      botPos += botSpeedBase + Math.random()*1.2;
+
+      meRun.style.transform=`translateX(${mePos}px)`;
+      botRun.style.transform=`translateX(${botPos}px)`;
+
+      if(mePos>=finish || botPos>=finish){
+        clearInterval(timer);
+        const win = mePos>=finish && mePos>=botPos;
+
+        if(win){
+          const reward = 30 + (pet.level||1)*5;
+          const expGain = 15;
+
+          await addCoins(reward);
+          await updateDoc(doc(db,"users",uid),{
+            "activePet.exp": increment(expGain)
+          });
+
+          msg.style.color="lightgreen";
+          msg.innerText=`🎉 Bạn thắng! +${reward} xu, pet +${expGain} EXP`;
+        }else{
+          msg.style.color="#ffd1e6";
+          msg.innerText="😿 Bạn thua! Luyện pet rồi đua lại nhé.";
+        }
+
+        // reset
+        setTimeout(()=>{
+          meRun.style.transform="translateX(0px)";
+          botRun.style.transform="translateX(0px)";
+          startBtn.disabled=false;
+          racing=false;
+        },900);
+      }
+    },120);
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("pet");
+</script>
+
+</body>
+</html>
