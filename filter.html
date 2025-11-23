@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Bộ lọc</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>🎯 Bộ lọc nâng cao</h2>
+
+  <div class="box">
+    <label>Tuổi tối thiểu</label>
+    <input id="minAge" type="number" value="18">
+    <label>Tuổi tối đa</label>
+    <input id="maxAge" type="number" value="40">
+
+    <label>Giới tính muốn tìm</label>
+    <select id="lookingFor">
+      <option value="all">Tất cả</option>
+      <option value="male">Nam</option>
+      <option value="female">Nữ</option>
+      <option value="other">Khác</option>
+    </select>
+
+    <label>Khoảng cách tối đa (km)</label>
+    <input id="distanceKm" type="number" value="50">
+
+    <label>Sở thích bắt buộc (cách nhau bằng dấu phẩy)</label>
+    <input id="requiredInterests" placeholder="music, travel, game">
+
+    <label style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+      <input id="vipOnly" type="checkbox">
+      Chỉ hiện người có VIP
+    </label>
+
+    <button class="btn" style="margin-top:8px" onclick="save()">💾 Lưu bộ lọc</button>
+    <p id="msg" class="muted"></p>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const $=id=>document.getElementById(id);
+  const msg=$("msg");
+
+  let uid=null, filter=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+
+    const fRef=doc(db,"filters",uid);
+    const fSnap=await getDoc(fRef);
+    filter=fSnap.exists()?fSnap.data():{
+      minAge:18,maxAge:40,lookingFor:"all",
+      distanceKm:50,requiredInterests:[],vipOnly:false
+    };
+
+    // fill UI
+    $("minAge").value=filter.minAge||18;
+    $("maxAge").value=filter.maxAge||40;
+    $("lookingFor").value=filter.lookingFor||"all";
+    $("distanceKm").value=filter.distanceKm||50;
+    $("requiredInterests").value=(filter.requiredInterests||[]).join(", ");
+    $("vipOnly").checked=!!filter.vipOnly;
+  });
+
+  window.save = async ()=>{
+    filter={
+      minAge:Number($("minAge").value||18),
+      maxAge:Number($("maxAge").value||40),
+      lookingFor:$("lookingFor").value,
+      distanceKm:Number($("distanceKm").value||50),
+      requiredInterests: $("requiredInterests").value
+        .split(",").map(x=>x.trim()).filter(Boolean),
+      vipOnly:$("vipOnly").checked,
+      updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(db,"filters",uid),filter,{merge:true});
+    msg.style.color="lightgreen";
+    msg.innerText="✅ Đã lưu bộ lọc! Quay lại Explore xem kết quả.";
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("explore");
+</script>
+
+</body>
+</html>
