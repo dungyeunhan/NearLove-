@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Season Pass</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .milestone{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .lane{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media(max-width:700px){.lane{grid-template-columns:1fr;}}
+  .locked{opacity:.6;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🎫 Season Pass</h2>
+
+  <div class="box" id="info">Đang tải...</div>
+
+  <div class="lane" style="margin-top:10px;">
+    <div class="box">
+      <div style="font-weight:900;">Free Pass</div>
+      <div id="freeList" style="margin-top:8px;"></div>
+    </div>
+    <div class="box">
+      <div style="font-weight:900;">VIP Pass 👑</div>
+      <div class="muted" style="font-size:12px;">Chỉ VIP tier ≥1 mới claim được nhánh này</div>
+      <div id="vipList" style="margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="season.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { getCurrentSeason, ensureMilestones, getMySeasonPoints, claimMilestone } from "./season.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const infoEl=document.getElementById("info");
+  const freeList=document.getElementById("freeList");
+  const vipList=document.getElementById("vipList");
+
+  let uid=null, me=null, seasonId=null, milestones=null, pass=null, myPts=0;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.data()||{};
+
+    const season=await getCurrentSeason();
+    seasonId=season.seasonId;
+
+    milestones = await ensureMilestones(seasonId);
+    myPts = await getMySeasonPoints(seasonId, uid);
+
+    infoEl.innerHTML=`
+      <div style="font-weight:900;">${season.name}</div>
+      <div class="muted">Điểm mùa của bạn: <b>${myPts}</b></div>
+      <a class="tag" href="season.html">Xem BXH mùa</a>
+    `;
+
+    const passRef=doc(db,"seasonPass",seasonId,"users",uid);
+    onSnapshot(passRef, (snap)=>{
+      pass = snap.exists()?snap.data():{claimedFree:{},claimedVip:{}};
+      render();
+    });
+  });
+
+  function render(){
+    renderLane("free", milestones.free, freeList);
+    renderLane("vip", milestones.vip, vipList);
+  }
+
+  function renderLane(lane, list, el){
+    el.innerHTML="";
+    list.forEach(m=>{
+      const claimed = lane==="vip" ? pass.claimedVip?.[m.id] : pass.claimedFree?.[m.id];
+      const canClaim = myPts>=m.pts && !claimed && (lane==="free" || (me.vipTier||0)>0);
+
+      const row=document.createElement("div");
+      row.className=`row milestone fade-in ${myPts<m.pts?"locked":""}`;
+      row.innerHTML=`
+        <div style="flex:1">
+          <div style="font-weight:900">${m.rewardItem?.icon||"🎁"} ${m.rewardItem?.name||"Reward"}</div>
+          <div class="muted">Mốc: ${m.pts} pts • +${m.rewardCoins||0} xu</div>
+        </div>
+        <button class="btn ${canClaim?'':'light'}" style="width:auto"
+          ${canClaim?'':'disabled'}>
+          ${claimed?"Đã nhận":"Nhận"}
+        </button>
+      `;
+      row.querySelector("button").onclick=()=>doClaim(lane,m);
+      el.appendChild(row);
+    });
+  }
+
+  async function doClaim(lane, m){
+    const res = await claimMilestone(seasonId, lane, m);
+    if(!res.ok){
+      alert(res.msg==="not enough points"?"Chưa đủ điểm mùa.":res.msg);
+      return;
+    }
+    alert("✅ Nhận thưởng thành công!");
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("season");
+</script>
+
+</body>
+</html>
