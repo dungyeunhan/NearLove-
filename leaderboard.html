@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Bảng xếp hạng</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .tab{
+    padding:8px 12px;border-radius:999px;cursor:pointer;
+    background:rgba(255,255,255,0.06);font-weight:900;font-size:13px;
+  }
+  .tab.active{background:#ff5fa2;color:#111;}
+  .row{align-items:center;}
+  .rank{width:26px;font-weight:900;color:#ffd1e6;}
+  .sub{font-size:12px;opacity:.8;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🏆 Bảng xếp hạng</h2>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="rich">💰 Đại gia</div>
+    <div class="tab" data-tab="style">👗 Style</div>
+    <div class="tab" data-tab="pet">🐾 Pet</div>
+    <div class="tab" data-tab="guild">🏰 Bang</div>
+    <div class="tab" data-tab="war">⚔️ War tuần</div>
+    <div class="tab" data-tab="couple">💍 Cặp đôi</div>
+    <div class="tab" data-tab="travel">✈️ Du lịch</div>
+  </div>
+
+  <div id="content"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có dữ liệu.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { db } from "./firebase.js";
+  import {
+    collection, query, orderBy, limit, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const tabsEl=document.getElementById("tabs");
+  const content=document.getElementById("content");
+  const emptyEl=document.getElementById("empty");
+  let unsub=null;
+  let currentTab="rich";
+
+  tabsEl.onclick=(e)=>{
+    const t=e.target.closest(".tab");
+    if(!t) return;
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    currentTab=t.dataset.tab;
+    loadTab();
+  };
+
+  loadTab();
+
+  function loadTab(){
+    if(unsub) unsub();
+
+    if(currentTab==="rich") return loadRich();
+    if(currentTab==="style") return loadStyle();
+    if(currentTab==="pet") return loadPet();
+    if(currentTab==="guild") return loadGuild();
+    if(currentTab==="war") return loadWar();
+    if(currentTab==="couple") return loadCouple();
+    if(currentTab==="travel") return loadTravel();
+  }
+
+  // 💰 Đại gia
+  function loadRich(){
+    const q=query(collection(db,"users"), orderBy("coins","desc"), limit(20));
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({uid:d.id,...d.data()}));
+      renderUsers(list,(u)=>`💰 ${u.coins||0} xu • VIP${u.vipTier||0}`);
+    });
+  }
+
+  // 👗 Style (wardrobe)
+  function loadStyle(){
+    const q=query(collection(db,"wardrobe"), orderBy("stylePoints","desc"), limit(20));
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({uid:d.id,...d.data()}));
+      renderGeneric(list,(x)=>`👗 Style: ${x.stylePoints||0}`, "wardrobe");
+    });
+  }
+
+  // 🐾 Pet (users.activePet)
+  function loadPet(){
+    const q=query(collection(db,"users"), orderBy("activePet.level","desc"), limit(20));
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>{
+        const u=d.data();
+        if(!u.activePet) return;
+        list.push({uid:d.id,...u});
+      });
+      renderUsers(list,(u)=>`🐾 ${u.activePet.icon||"🐾"} ${u.activePet.name||"Pet"} • Lv.${u.activePet.level||1} • EXP ${u.activePet.exp||0}`);
+    });
+  }
+
+  // 🏰 Bang (level/exp)
+  function loadGuild(){
+    const q=query(collection(db,"guilds"),
+      orderBy("level","desc"),
+      orderBy("exp","desc"),
+      limit(20)
+    );
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({id:d.id,...d.data()}));
+      renderGuilds(list,(g)=>`Lv.${g.level||1} • EXP ${g.exp||0} • TV ${(g.members||[]).length}`);
+    });
+  }
+
+  // ⚔️ War tuần
+  function loadWar(){
+    const q=query(collection(db,"guilds"),
+      orderBy("warPoints","desc"),
+      limit(20)
+    );
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({id:d.id,...d.data()}));
+      renderGuilds(list,(g)=>`Tuần ${g.warWeek||"-"} • ⚔️ ${g.warPoints||0} điểm`);
+    });
+  }
+
+  // 💍 Cặp đôi (weddings.giftsTotal)
+  function loadCouple(){
+    const q=query(collection(db,"weddings"), orderBy("giftsTotal","desc"), limit(20));
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({id:d.id,...d.data()}));
+      renderCouples(list);
+    });
+  }
+
+  // ✈️ Du lịch
+  function loadTravel(){
+    const q=query(collection(db,"travels"), orderBy("totalTrips","desc"), limit(20));
+    unsub=onSnapshot(q,(snap)=>{
+      const list=[];
+      snap.forEach(d=>list.push({uid:d.id,...d.data()}));
+      renderGeneric(list,(x)=>`✈️ ${x.totalTrips||0} chuyến`, "travels");
+    });
+  }
+
+
+  // ===== RENDER HELPERS =====
+  function renderUsers(list, rightTextFn){
+    content.innerHTML="";
+    if(list.length===0){ emptyEl.style.display="block"; return; }
+    emptyEl.style.display="none";
+
+    content.innerHTML = list.map((u,idx)=>`
+      <div class="row fade-in">
+        <div class="rank">${idx+1}</div>
+        <img class="avatar" src="${u.avatar||'default.png'}" style="width:46px;height:46px;">
+        <div style="flex:1">
+          <div style="font-weight:900">${u.name||u.uid}</div>
+          <div class="sub">${u.uid}</div>
+        </div>
+        <div class="sub pink" style="font-weight:900;text-align:right;">
+          ${rightTextFn(u)}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function renderGuilds(list, rightTextFn){
+    content.innerHTML="";
+    if(list.length===0){ emptyEl.style.display="block"; return; }
+    emptyEl.style.display="none";
+
+    content.innerHTML = list.map((g,idx)=>`
+      <div class="row fade-in">
+        <div class="rank">${idx+1}</div>
+        <div style="font-size:28px">${g.badge||"🏰"}</div>
+        <div style="flex:1">
+          <div style="font-weight:900">${g.name||"Bang hội"}</div>
+          <div class="sub">ID: ${g.id}</div>
+        </div>
+        <div class="sub pink" style="font-weight:900;text-align:right;">
+          ${rightTextFn(g)}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function renderCouples(list){
+    content.innerHTML="";
+    if(list.length===0){ emptyEl.style.display="block"; return; }
+    emptyEl.style.display="none";
+
+    content.innerHTML = list.map((w,idx)=>`
+      <div class="row fade-in">
+        <div class="rank">${idx+1}</div>
+        <img class="avatar" src="${w.aAvatar||'default.png'}" style="width:40px;height:40px;">
+        <div style="flex:1">
+          <div style="font-weight:900">${w.aName||"A"} & ${w.bName||"B"}</div>
+          <div class="sub">💍 ${w.id}</div>
+        </div>
+        <div class="sub pink" style="font-weight:900;text-align:right;">
+          🎁 ${w.giftsTotal||0} xu
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function renderGeneric(list, rightTextFn){
+    content.innerHTML="";
+    if(list.length===0){ emptyEl.style.display="block"; return; }
+    emptyEl.style.display="none";
+
+    content.innerHTML = list.map((x,idx)=>`
+      <div class="row fade-in">
+        <div class="rank">${idx+1}</div>
+        <div style="flex:1;font-weight:900">${x.uid}</div>
+        <div class="sub pink" style="font-weight:900;text-align:right;">
+          ${rightTextFn(x)}
+        </div>
+      </div>
+    `).join("");
+  }
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("leaderboard");
+</script>
+
+</body>
+</html>
