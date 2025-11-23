@@ -1,182 +1,118 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NearLove - VIP</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f1115;
-      color: white;
-      padding: 18px;
-      padding-bottom: 80px;
-    }
-    header{
-      max-width: 980px;
-      margin: 0 auto 14px;
-      display:flex; align-items:center; justify-content:space-between;
-      position: sticky; top:0; z-index:10;
-      background:#0f1115; padding:8px 0;
-    }
-    header h1{ margin:0; font-size:22px; color:#ff8ac9; }
-    header a{
-      color:white; text-decoration:none; font-weight:bold;
-      background: rgba(255,255,255,0.08);
-      padding:8px 12px; border-radius:999px;
-    }
-
-    .wrap{ max-width:980px; margin:auto; display:grid; gap:12px; }
-    .vip{
-      background: #151824;
-      border-radius: 16px;
-      padding: 14px;
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px;
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .vip h2{ margin:0 0 6px; font-size:18px; }
-    .price{ font-weight:800; color:#ffd1e6; }
-    .perks{ opacity:0.9; font-size:14px; line-height:1.6; }
-
-    .btn{
-      align-self:center;
-      background: linear-gradient(135deg,#ff3d7f,#ff8ac9);
-      color:white; border:none; padding:10px 14px;
-      border-radius:12px; font-weight:bold; cursor:pointer;
-    }
-
-    .note{
-      max-width:980px; margin:14px auto 0;
-      font-size:14px; opacity:0.7;
-      background: rgba(255,255,255,0.06); padding:10px; border-radius:12px;
-    }
-
-    .nav{
-      display:flex;
-      justify-content:space-around;
-      background:white;
-      border-top:1px solid #eee;
-      padding:8px 0;
-      font-size:13px;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-    }
-    .nav a{
-      text-decoration:none;
-      color:#666;
-      display:flex; flex-direction:column; align-items:center;
-      gap:2px;
-      font-weight:bold;
-    }
-    .nav a.active{ color:#ff2e73; }
-  </style>
+<meta charset="UTF-8">
+<title>NearLove - VIP</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .vip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:700px){.vip-grid{grid-template-columns:repeat(2,1fr);}}
+  .tier{border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;}
+</style>
 </head>
 <body>
 
-<header>
-  <a href="profile.html">← Hồ sơ</a>
-  <h1>NearLove • VIP 6 cấp</h1>
-  <a href="index.html">Trang chủ</a>
-</header>
+<div class="container">
+  <h2>👑 NearLove VIP</h2>
 
-<div class="wrap">
+  <div class="box" id="myVipBox">Đang tải...</div>
 
-  <div class="vip">
-    <div>
-      <h2>1) VIP Nông Dân</h2>
-      <div class="price">19.000đ / tháng</div>
-      <div class="perks">
-        • Khung hồ sơ cơ bản<br/>
-        • 200 xu mỗi ngày<br/>
-        • Vào phòng chat VIP Nông Dân
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
-  <div class="vip">
-    <div>
-      <h2>2) VIP Công Nhân</h2>
-      <div class="price">49.000đ / tháng</div>
-      <div class="perks">
-        • Khung hồ sơ xanh dương<br/>
-        • 500 xu mỗi ngày<br/>
-        • Tăng 20% lượt ghép đôi
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
-  <div class="vip">
-    <div>
-      <h2>3) VIP Doanh Nhân</h2>
-      <div class="price">99.000đ / tháng</div>
-      <div class="perks">
-        • Hiệu ứng hồ sơ phát sáng<br/>
-        • 1.000 xu mỗi ngày<br/>
-        • Ưu tiên hiển thị hồ sơ
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
-  <div class="vip">
-    <div>
-      <h2>4) VIP Thương Gia</h2>
-      <div class="price">199.000đ / tháng</div>
-      <div class="perks">
-        • Khung hồ sơ vàng<br/>
-        • 2.000 xu mỗi ngày<br/>
-        • Mở mini-game nâng cao
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
-  <div class="vip">
-    <div>
-      <h2>5) VIP Hoàng Gia</h2>
-      <div class="price">399.000đ / tháng</div>
-      <div class="perks">
-        • Huy hiệu Hoàng Gia + phòng chat riêng<br/>
-        • 5.000 xu mỗi ngày<br/>
-        • Tặng thú cưng hiếm
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
-  <div class="vip">
-    <div>
-      <h2>6) VIP Đế Vương</h2>
-      <div class="price">699.000đ / tháng</div>
-      <div class="perks">
-        • Hiệu ứng hồ sơ siêu cấp tỏa sáng<br/>
-        • 10.000 xu mỗi ngày<br/>
-        • BXH đại gia + đấu giá vật phẩm đặc biệt
-      </div>
-    </div>
-    <button class="btn">Nâng cấp</button>
-  </div>
-
+  <div class="vip-grid" id="tiers" style="margin-top:10px;"></div>
+  <p id="msg" class="muted"></p>
 </div>
 
-<div class="note">
-  Đây là bản demo hiển thị VIP. Sau này khi có backend, nút “Nâng cấp”
-  sẽ kết nối thanh toán thật (Momo/ZaloPay/VNPay).
-</div>
+<script type="module" src="firebase.js"></script>
+<script type="module" src="coins.js"></script>
+<script type="module" src="vip.js"></script>
+<script src="theme.js"></script>
 
-<div class="nav">
-  <a href="index.html">🏠<span>Home</span></a>
-  <a href="match.html">💗<span>Match</span></a>
-  <a href="chat.html">💬<span>Chat</span></a>
-  <a class="active" href="vip.html">👑<span>VIP</span></a>
-  <a href="profile.html">👤<span>Profile</span></a>
-</div>
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+  import { VIP_TIERS, buyVip, getMyVip } from "./vip.js";
+
+  const myVipBox=document.getElementById("myVipBox");
+  const tiersEl=document.getElementById("tiers");
+  const msgEl=document.getElementById("msg");
+
+  let uid=null, me=null;
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){location.href="login.html";return;}
+    uid=user.uid;
+
+    const meSnap=await getDoc(doc(db,"users",uid));
+    me=meSnap.exists()?meSnap.data():{};
+    renderMyVip();
+
+    renderTiers();
+  });
+
+  async function renderMyVip(){
+    const vip=await getMyVip();
+    const exp=me.vipExpireAt?.toDate?me.vipExpireAt.toDate().toLocaleString():"—";
+
+    myVipBox.innerHTML=`
+      <div style="font-weight:900;font-size:18px;color:${vip.color}">
+        ${vip.name}
+      </div>
+      <div class="muted">Hết hạn: <b>${exp}</b></div>
+      <div class="muted">Tier hiện tại: <b>${me.vipTier||0}</b></div>
+    `;
+  }
+
+  function renderTiers(){
+    tiersEl.innerHTML="";
+    Object.entries(VIP_TIERS).forEach(([k,t])=>{
+      const tier=Number(k);
+      if(tier===0) return;
+
+      const card=document.createElement("div");
+      card.className="tier card fade-in";
+      card.innerHTML=`
+        <div style="font-weight:900;font-size:16px;color:${t.color}">
+          👑 ${t.name}
+        </div>
+        <div class="muted">Giá: <b>${t.price}</b> xu / 30 ngày</div>
+
+        <ul class="muted" style="margin-top:6px;font-size:12px;">
+          <li>Màu chat riêng</li>
+          <li>Tăng tốc match</li>
+          <li>Phòng VIP tier ${tier}</li>
+          <li>Ưu tiên BXH</li>
+        </ul>
+
+        <button class="btn" style="margin-top:8px" onclick="buy(${tier})">
+          Mua / Gia hạn
+        </button>
+      `;
+      tiersEl.appendChild(card);
+    });
+  }
+
+  window.buy = async (tier)=>{
+    msgEl.innerText="Đang xử lý...";
+    const res=await buyVip(tier);
+    if(!res.ok){
+      msgEl.style.color="red";
+      msgEl.innerText = res.msg==="not enough coins"
+        ? "Không đủ xu để mua VIP."
+        : "Lỗi mua VIP.";
+      return;
+    }
+    msgEl.style.color="lightgreen";
+    msgEl.innerText=`✅ Mua VIP thành công! Tier mới: ${res.newTier}`;
+    location.reload();
+  };
+</script>
+
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("vip");
+</script>
 
 </body>
 </html>
