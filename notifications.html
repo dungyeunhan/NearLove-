@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>NearLove - Thông báo</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .noti{cursor:pointer;}
+  .noti.unread{border:1px solid rgba(255,138,201,0.6);}
+  .dot{
+    width:8px;height:8px;border-radius:50%;background:#ff3d7f;display:inline-block;margin-right:6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🔔 Thông báo</h2>
+  <div id="notiList"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Chưa có thông báo nào.</p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="notify.js"></script>
+<script src="theme.js"></script>
+
+<script type="module">
+  import { auth, db } from "./firebase.js";
+  import { markRead } from "./notify.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import {
+    collection, query, orderBy, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+  const listEl = document.getElementById("notiList");
+  const emptyEl = document.getElementById("empty");
+  let uid=null;
+
+  onAuthStateChanged(auth,(user)=>{
+    if(!user){ alert("Bạn chưa đăng nhập!"); location.href="login.html"; return; }
+    uid=user.uid;
+
+    const q = query(
+      collection(db,"notifications",uid,"items"),
+      orderBy("createdAt","desc")
+    );
+
+    onSnapshot(q,(snap)=>{
+      listEl.innerHTML="";
+      if(snap.empty){ emptyEl.style.display="block"; return; }
+      emptyEl.style.display="none";
+
+      snap.forEach(d=>{
+        const n=d.data();
+        const id=d.id;
+
+        const row=document.createElement("div");
+        row.className="row noti fade-in "+(n.read?"":"unread");
+
+        const timeStr = n.createdAt?.toDate
+          ? n.createdAt.toDate().toLocaleString()
+          : "";
+
+        row.innerHTML=`
+          <img class="avatar" src="${n.fromAvatar||'default.png'}" style="width:48px;height:48px;">
+          <div style="flex:1">
+            <div style="font-weight:900">
+              ${n.read?"":"<span class='dot'></span>"}
+              ${n.fromName||"Ai đó"}
+            </div>
+            <div class="muted">${renderText(n)}</div>
+            <div class="muted" style="font-size:11px;margin-top:4px;">${timeStr}</div>
+          </div>
+        `;
+
+        row.onclick = async ()=>{
+          if(!n.read) await markRead(uid,id);
+
+          // Điều hướng theo loại noti
+          if(n.type==="like"){
+            location.href = `profile_public.html?uid=${n.fromUid}`;
+          }
+          if(n.type==="match"){
+            location.href = `chat.html?match=${n.matchId}`;
+          }
+          if(n.type==="message"){
+            location.href = `chat.html?match=${n.matchId}`;
+          }
+        };
+
+        listEl.appendChild(row);
+      });
+    });
+  });
+
+  function renderText(n){
+    if(n.type==="like") return "đã thả tim bạn 💗";
+    if(n.type==="match") return "đã match với bạn 🎉";
+    if(n.type==="message") return `nhắn: "${n.text||""}" 💬`;
+    return n.text||"";
+  }
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("noti");
+</script>
+
+</body>
+</html>
