@@ -3,83 +3,85 @@
 <head>
 <meta charset="UTF-8" />
 <title>NearLove - Khám phá</title>
-
+<link rel="stylesheet" href="theme.css">
 <style>
-  body {
-    font-family: Arial;
-    background:#fff0f6;
-    padding:16px;
-  }
-
-  h2 {
-    text-align:center;
-    color:#ff2e73;
-    margin-bottom:20px;
-  }
-
-  .user-card {
-    background:white;
-    padding:14px;
-    margin-bottom:14px;
-    border-radius:14px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
-  }
-
-  .name {
-    font-size:20px;
-    font-weight:bold;
-  }
-
-  .info {
-    opacity:0.8;
-    margin:4px 0;
-  }
-
-  .btn {
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:12px;
-    background:#ff2e73;
-    color:white;
-    font-size:16px;
-    font-weight:bold;
-    margin-top:10px;
-  }
-
-  .btn-chat {
-    background:#3a86ff;
-  }
+  .filter-box{margin-bottom:12px;}
+  .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+  .filter-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;}
+  .user-card{display:flex;flex-direction:column;gap:8px;}
+  .score{font-size:12px;font-weight:900;color:#ffd1e6;}
 </style>
-
 </head>
-
 <body>
 
-<h2>💞 Khám phá người mới</h2>
+<div class="container">
 
-<div id="list"></div>
+  <h2>💞 Khám phá người mới</h2>
 
-<!-- Firebase -->
+  <!-- FILTERS -->
+  <div class="box filter-box">
+    <div style="font-weight:900;margin-bottom:4px;">Bộ lọc</div>
+
+    <input id="searchName" placeholder="Tìm theo tên...">
+
+    <div class="filter-row">
+      <select id="genderFilter">
+        <option value="all">Tất cả giới tính</option>
+        <option value="nam">Nam</option>
+        <option value="nữ">Nữ</option>
+        <option value="khác">Khác</option>
+      </select>
+
+      <select id="vipFilter">
+        <option value="all">Tất cả VIP</option>
+        <option value="0">Thường</option>
+        <option value="1">VIP 1+</option>
+        <option value="3">VIP 3+</option>
+        <option value="5">VIP 5+</option>
+        <option value="6">VIP 6</option>
+      </select>
+    </div>
+
+    <div class="filter-row-3">
+      <input id="minAge" type="number" placeholder="Tuổi min">
+      <input id="maxAge" type="number" placeholder="Tuổi max">
+      <button class="btn light" id="applyBtn">Áp dụng</button>
+    </div>
+
+    <div class="muted" style="margin-top:6px;">
+      * AI gợi ý sẽ tự sắp xếp người hợp nhất lên đầu.
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div id="list" class="grid-2"></div>
+  <p id="empty" class="muted" style="text-align:center;display:none;">Không có ai phù hợp bộ lọc 😅</p>
+
+</div>
+
 <script type="module" src="firebase.js"></script>
+<script src="theme.js"></script>
 
 <script type="module">
   import { auth, db } from "./firebase.js";
-
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
   import {
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-
-  import {
-    collection, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
-
-  import {
-    doc, setDoc, getDoc, serverTimestamp
+    collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
   const listDiv = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+
+  const searchNameEl = document.getElementById("searchName");
+  const genderFilterEl = document.getElementById("genderFilter");
+  const vipFilterEl = document.getElementById("vipFilter");
+  const minAgeEl = document.getElementById("minAge");
+  const maxAgeEl = document.getElementById("maxAge");
+  const applyBtn = document.getElementById("applyBtn");
+
   let currentUid = null;
+  let meProfile = null;
+  let allUsers = [];
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -90,93 +92,213 @@
 
     currentUid = user.uid;
 
-    // Realtime load tất cả users
-    onSnapshot(collection(db, "users"), async (snap) => {
-      listDiv.innerHTML = "";
+    // load profile mình (để AI gợi ý)
+    const meSnap = await getDoc(doc(db, "users", currentUid));
+    meProfile = meSnap.exists() ? meSnap.data() : {};
 
-      snap.forEach(docUser => {
-        const data = docUser.data();
-        const uid = docUser.id;
+    // realtime load toàn bộ users
+    onSnapshot(collection(db, "users"), (snap) => {
+      allUsers = [];
+      snap.forEach(d => {
+        const u = d.data();
+        const uid = d.id;
 
-        if (uid === currentUid) return; // bỏ chính mình
+        if (uid === currentUid) return;
+        if (u.hidden) return;
 
-        const card = document.createElement("div");
-        card.className = "user-card";
-
-        card.innerHTML = `
-          <div class="name">${data.name || "Chưa đặt tên"}</div>
-          <div class="info">Tuổi: ${data.age || "?"}</div>
-          <div class="info">Giới tính: ${data.gender || "?"}</div>
-          <div class="info">${data.bio || ""}</div>
-        `;
-
-        // NÚT THẢ TIM
-        const likeBtn = document.createElement("button");
-        likeBtn.className = "btn";
-        likeBtn.innerText = "💗 Thả tim";
-
-        likeBtn.onclick = () => likeUser(uid);
-
-        card.appendChild(likeBtn);
-
-        // kiểm tra đã match chưa
-        checkMatch(uid).then(matchId => {
-          if (matchId) {
-            const chatBtn = document.createElement("button");
-            chatBtn.className = "btn btn-chat";
-            chatBtn.innerText = "💬 Chat ngay";
-            chatBtn.onclick = () => {
-              window.location.href = `chat.html?match=${matchId}`;
-            };
-            card.appendChild(chatBtn);
-          }
-        });
-
-        listDiv.appendChild(card);
+        allUsers.push({ uid, ...u });
       });
+
+      render();
     });
   });
 
-  // Like function (dùng code B7)
+  applyBtn.onclick = render;
+  searchNameEl.oninput = render;
+  genderFilterEl.onchange = render;
+  vipFilterEl.onchange = render;
+
+  function render(){
+    if(!meProfile) return;
+
+    // 1) lọc theo filter
+    const filtered = allUsers.filter(u => {
+      // search name
+      const kw = searchNameEl.value.trim().toLowerCase();
+      if(kw && !(u.name||"").toLowerCase().includes(kw)) return false;
+
+      // gender
+      const gf = genderFilterEl.value;
+      if(gf !== "all"){
+        const g = (u.gender||"").toLowerCase();
+        if(g !== gf) return false;
+      }
+
+      // vip
+      const vf = vipFilterEl.value;
+      const tier = u.vipTier || 0;
+      if(vf !== "all"){
+        const v = Number(vf);
+        if(v === 6 && tier !== 6) return false;
+        if(v !== 6 && tier < v) return false;
+      }
+
+      // age range
+      const minA = Number(minAgeEl.value || 0);
+      const maxA = Number(maxAgeEl.value || 999);
+      const age = Number(u.age || 0);
+      if(age && (age < minA || age > maxA)) return false;
+
+      return true;
+    });
+
+    // 2) AI score + sort
+    const scored = filtered.map(u => ({
+      ...u,
+      score: calcScore(meProfile, u)
+    })).sort((a,b)=> b.score - a.score);
+
+    // 3) render list
+    listDiv.innerHTML = "";
+    if(scored.length===0){
+      emptyEl.style.display="block";
+      return;
+    }
+    emptyEl.style.display="none";
+
+    scored.forEach(u=>{
+      const vipTier = u.vipTier||0;
+      const vipColor = getVipColor(vipTier);
+      const petText = u.activePet ? `${u.activePet.icon||"🐾"} ${u.activePet.name} Lv.${u.activePet.level||1}`:"";
+      const houseText = u.activeHouse ? `${u.activeHouse.icon||"🏠"} ${u.activeHouse.name} Lv.${u.activeHouse.level||1}`:"";
+
+      const card = document.createElement("div");
+      card.className = "card user-card fade-in";
+
+      card.innerHTML = `
+        <img src="${u.avatar || 'default.png'}" style="width:100%;border-radius:14px;">
+        <div style="font-weight:900;font-size:18px;color:${vipColor}">
+          ${u.name || "Chưa đặt tên"} ${vipTier?`👑VIP${vipTier}`:""}
+        </div>
+        <div class="muted">
+          ${u.gender?`• ${u.gender}`:""} ${u.age?`• ${u.age} tuổi`:""}
+          ${petText?`<br>Pet: ${petText}`:""}
+          ${houseText?`<br>Nhà: ${houseText}`:""}
+        </div>
+        <div class="score">AI hợp nhau: ${u.score} điểm</div>
+
+        <button class="btn" onclick="likeUser('${u.uid}')">💗 Thả tim</button>
+        <button class="btn light" onclick="location.href='profile_public.html?uid=${u.uid}'">👤 Xem hồ sơ</button>
+      `;
+
+      listDiv.appendChild(card);
+      // check match để hiện nút chat
+      checkMatch(u.uid).then(matchId=>{
+        if(matchId){
+          const chatBtn=document.createElement("button");
+          chatBtn.className="btn blue";
+          chatBtn.innerText="💬 Chat ngay";
+          chatBtn.onclick=()=>location.href=`chat.html?match=${matchId}`;
+          card.appendChild(chatBtn);
+        }
+      });
+    });
+  }
+
+  // ===== Like (y như B7) =====
   window.likeUser = async (targetUid) => {
     const myUid = currentUid;
+    if (myUid === targetUid) return;
 
     await setDoc(doc(db, "likes", `${myUid}_${targetUid}`), {
-      from: myUid,
-      to: targetUid,
-      time: serverTimestamp()
+      from: myUid, to: targetUid, time: serverTimestamp()
     });
 
     const reverse = await getDoc(doc(db, "likes", `${targetUid}_${myUid}`));
-
     if (reverse.exists()) {
       const matchId = `${myUid}_${targetUid}`;
-
       await setDoc(doc(db, "matches", matchId), {
-        users: [myUid, targetUid],
-        time: serverTimestamp()
+        users: [myUid, targetUid], time: serverTimestamp()
       });
-
       alert("🎉 MATCH THÀNH CÔNG!");
-      location.reload();
+      render();
     } else {
       alert("💗 Đã thả tim! Chờ đối phương thả tim lại.");
     }
   };
 
-  // Kiểm tra đã match chưa
   async function checkMatch(otherUid) {
     const myUid = currentUid;
-
-    // match id có thể là A_B hoặc B_A
     const m1 = await getDoc(doc(db, "matches", `${myUid}_${otherUid}`));
     if (m1.exists()) return `${myUid}_${otherUid}`;
-
     const m2 = await getDoc(doc(db, "matches", `${otherUid}_${myUid}`));
     if (m2.exists()) return `${otherUid}_${myUid}`;
-
     return null;
   }
+
+  // ===== MVP AI SCORE =====
+  function calcScore(me, other){
+    let score = 0;
+
+    const myAge = Number(me.age||0);
+    const oAge = Number(other.age||0);
+
+    // 1) tuổi gần nhau (+40)
+    if(myAge && oAge){
+      const diff = Math.abs(myAge - oAge);
+      if(diff <= 2) score += 40;
+      else if(diff <= 5) score += 30;
+      else if(diff <= 8) score += 20;
+      else if(diff <= 12) score += 10;
+    }else{
+      score += 10; // chưa đủ info vẫn cho nhẹ
+    }
+
+    // 2) ưu tiên VIP ngang/tương đối (+25)
+    const myVip = me.vipTier||0;
+    const oVip = other.vipTier||0;
+    const vipDiff = Math.abs(myVip - oVip);
+    if(vipDiff===0) score += 25;
+    else if(vipDiff<=2) score += 15;
+    else score += 5;
+
+    // 3) pet giống loại (bonus +10)
+    if(me.activePet && other.activePet){
+      if(me.activePet.id === other.activePet.id) score += 10;
+      else score += 5;
+    }
+
+    // 4) house level gần nhau (bonus +10)
+    if(me.activeHouse && other.activeHouse){
+      const hdiff = Math.abs((me.activeHouse.level||1)-(other.activeHouse.level||1));
+      if(hdiff<=1) score += 10;
+      else if(hdiff<=3) score += 6;
+      else score += 2;
+    }
+
+    // 5) bonus nếu đối phương có bio đầy đủ (+5)
+    if(other.bio && other.bio.length>=10) score += 5;
+
+    return score;
+  }
+
+  function getVipColor(tier){
+    if(tier>=6) return "#ffd700";
+    if(tier==5) return "#ff8ac9";
+    if(tier==4) return "#b388ff";
+    if(tier==3) return "#7bdff2";
+    if(tier==2) return "#7ee081";
+    if(tier==1) return "#ffffff";
+    return "#ffffff";
+  }
+</script>
+
+<!-- NAV + GUARD -->
+<script type="module">
+  import { renderNav } from "./nav.js";
+  import { requireAuth } from "./guard.js";
+  requireAuth();
+  renderNav("explore");
 </script>
 
 </body>
